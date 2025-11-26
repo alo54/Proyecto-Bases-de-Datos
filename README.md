@@ -1,6 +1,6 @@
 # Proyecto: Análisis de accidentes de tráfico en Chicago
 
-## Descripción general
+## Descripción general v2.0
 
 El conjunto de datos de “Accidentes de Tráfico de Chicago” es un registro público que contiene información detallada de cada choque reportable dentro de los límites de la ciudad y bajo la jurisdicción del Departamento de Policía de Chicago (CPD). Incluye circunstancias, causas y consecuencias de los incidentes viales, desde daños materiales menores hasta colisiones fatales.
 
