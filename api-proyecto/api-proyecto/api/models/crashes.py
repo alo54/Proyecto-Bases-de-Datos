@@ -5,7 +5,7 @@ from typing import Optional
 
 class CreateCrash(BaseModel):
     crash_record_id: str
-    crash_date: Optional[datetime]
+    incident_date: Optional[datetime]
     latitude: Optional[float]
     longitude: Optional[float]
     street_no: Optional[str]

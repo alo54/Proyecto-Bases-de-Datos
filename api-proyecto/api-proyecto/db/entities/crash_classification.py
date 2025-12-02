@@ -10,8 +10,8 @@ class CrashClassification(Base):
         ForeignKey("crashes.crash_record_id"),
         primary_key=True
     )
-    first_crash_type: Mapped[str | None] = mapped_column(String(100))
-    crash_type: Mapped[str | None] = mapped_column(String(100))
+    first_crash_type: Mapped[str | None] = mapped_column(String(150))
+    crash_type: Mapped[str | None] = mapped_column(String(150))
     prim_contributory_cause: Mapped[str | None] = mapped_column(String(255))
     sec_contributory_cause: Mapped[str | None] = mapped_column(String(255))
     damage: Mapped[str | None] = mapped_column(String(100))

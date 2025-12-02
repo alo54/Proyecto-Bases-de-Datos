@@ -10,6 +10,6 @@ class VehicleManeuvers(Base):
         ForeignKey("vehicle.vehicle_id"),
         primary_key=True
     )
-    maneuver: Mapped[str | None] = mapped_column(String(50))
+    maneuver: Mapped[str | None] = mapped_column(String(150))
 
     vehicle = relationship("Vehicle", back_populates="maneuvers")

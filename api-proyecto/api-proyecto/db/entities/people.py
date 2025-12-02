@@ -10,7 +10,7 @@ class People(Base):
     person_type: Mapped[str | None] = mapped_column(String(50))
 
     crash_record_id: Mapped[str | None] = mapped_column(
-        String(50),
+        String(128),
         ForeignKey("crashes.crash_record_id")
     )
     vehicle_id: Mapped[int | None] = mapped_column(
@@ -21,11 +21,11 @@ class People(Base):
 
     sex: Mapped[str | None] = mapped_column(String(10))
     age: Mapped[int | None] = mapped_column(Integer)
-    safety_equipment: Mapped[str | None] = mapped_column(String(100))
-    airbag_deployed: Mapped[str | None] = mapped_column(String(50))
+    safety_equipment: Mapped[str | None] = mapped_column(String(200))
+    airbag_deployed: Mapped[str | None] = mapped_column(String(100))
     injury_classification: Mapped[str | None] = mapped_column(String(100))
 
     crash = relationship("Crash", back_populates="people")
     vehicle = relationship("Vehicle", back_populates="people")
     driver_info = relationship("DriverInfo", back_populates="person", uselist=False)
-    pedestrian_info = relationship("PedestrianInfo", back_populates="person", uselist=False)
+    #pedestrian_info = relationship("PedestrianInfo", back_populates="person", uselist=False)

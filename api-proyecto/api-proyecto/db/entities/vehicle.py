@@ -11,14 +11,16 @@ class Vehicle(Base):
         String(128),
         ForeignKey("crashes.crash_record_id", onupdate="CASCADE", ondelete="CASCADE")
     )
-    crash_date: Mapped[str] = mapped_column(TIMESTAMP, nullable=False)
+    crash_date: Mapped[str] = mapped_column(TIMESTAMP, nullable=False) #Posiblemente cambio a timestamp?
 
     unit_no: Mapped[int | None] = mapped_column(Integer)
     unit_type: Mapped[str | None] = mapped_column(String(30))
     num_passengers: Mapped[int | None] = mapped_column(Integer)
     vehicle_year: Mapped[int | None] = mapped_column(Integer)
-    make: Mapped[str | None] = mapped_column(String(50))
-    model: Mapped[str | None] = mapped_column(String(100))
+    make: Mapped[str | None] = mapped_column(String(200))
+    model: Mapped[str | None] = mapped_column(String(200))
+    vehicle_type: Mapped[str | None] = mapped_column(String(200))
+
 
     crash = relationship("Crash", back_populates="vehicles")
 

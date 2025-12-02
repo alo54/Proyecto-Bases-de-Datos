@@ -8,12 +8,13 @@ class CreateVehicle(BaseModel):
     crash_unit_id: int
     crash_record_id: str
     crash_date: datetime
-    unit_no: Optional[int]
-    unit_type: Optional[str]
-    num_passengers: Optional[int]
-    vehicle_year: Optional[int]
-    make: Optional[str]
-    model: Optional[str]
+    unit_no: Optional[int] = None
+    unit_type: Optional[str] = None
+    num_passengers: Optional[int] = None
+    vehicle_year: Optional[int] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
+    vehicle_type: Optional[str] = None
 
 
 class ReadVehicle(CreateVehicle):
