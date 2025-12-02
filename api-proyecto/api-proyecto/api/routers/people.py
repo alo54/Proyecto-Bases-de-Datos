@@ -29,7 +29,7 @@ class PeopleRouter:
         self.logger.info("Querying all people")
         return db_session.query(People).all()
 
-    def get(self, people_id: int, request: Request):
+    def get(self, people_id: str, request: Request):
         db_session: Session = request.state.db_session
         self.logger.info(f"Getting person with id: {people_id}")
         record = db_session.query(People).get(people_id)
@@ -44,7 +44,7 @@ class PeopleRouter:
         db_session.flush()
         return new_record
 
-    def update(self, people_id: int, data: CreatePeople, request: Request):
+    def update(self, people_id: str, data: CreatePeople, request: Request):
         db_session: Session = request.state.db_session
         record = db_session.query(People).get(people_id)
         if not record:
@@ -56,7 +56,7 @@ class PeopleRouter:
         db_session.flush()
         return record
 
-    def delete(self, people_id: int, request: Request):
+    def delete(self, people_id: str, request: Request):
         db_session: Session = request.state.db_session
         record = db_session.query(People).get(people_id)
         if not record:

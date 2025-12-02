@@ -17,7 +17,7 @@ class VehicleModelsRouter:
 
         self.router = APIRouter(
             prefix="/vehicle-models",
-            tags=["Vehicle Models"]
+            tags=["Vehicle Specs"]
         )
 
         self.router.add_api_route("/", self.list, methods=["GET"], response_model=list[ReadVehicleModels])
