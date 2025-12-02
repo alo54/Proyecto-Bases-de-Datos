@@ -6,7 +6,7 @@ from util.logger import LoggerSessionManager
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware
 
-DATABASE_URL = "postgresql+psycopg2://alondra:alo54@10.10.10.28:5432/traffic_crashes"
+DATABASE_URL = "postgresql+psycopg2://postgres:gabriel7@localhost:5432/traffic_crashes"
 
 
 class DBSessionManager:

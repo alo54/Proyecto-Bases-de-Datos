@@ -6,7 +6,7 @@ class Crash(Base):
     __tablename__ = "crashes"
 
     crash_record_id: Mapped[str] = mapped_column(String(128), primary_key=True)
-    crash_date: Mapped[str | None] = mapped_column(TIMESTAMP, nullable=True)
+    incident_date: Mapped[str | None] = mapped_column(TIMESTAMP, nullable=True)
     latitude: Mapped[float | None] = mapped_column(Numeric(9, 6))
     longitude: Mapped[float | None] = mapped_column(Numeric(9, 6))
     street_no: Mapped[str | None] = mapped_column(String(20))

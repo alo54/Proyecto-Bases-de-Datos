@@ -142,36 +142,22 @@ CREATE TABLE driver_info
     FOREIGN KEY (person_id) REFERENCES people(person_id)
 );
 
--- ============================
--- TABLE: pedestrian_info
--- ============================
-DROP TABLE IF EXISTS pedestrian_info;
-CREATE TABLE pedestrian_info 
-(
-    person_id VARCHAR(128) PRIMARY KEY REFERENCES people(person_id),
-    pedpedal_action VARCHAR(128),
-    pedpedal_visibility VARCHAR(128),
-    pedpedal_location VARCHAR(128)
-);
+-- SELECT
+--     CASE
+--         WHEN age < 23 THEN 'Adolescente'
+--         WHEN age BETWEEN 23 AND 55 THEN 'Adulto'
+--         ELSE 'Adulto mayor'
+--     END AS grupo_edad,
+--     sex AS sexo,
+--     COUNT(*) AS total_personas_involucradas
+-- FROM people
+-- JOIN driver_info 
+--     ON people.person_id = driver_info.person_id   -- filtra solo conductores
+-- WHERE age IS NOT NULL 
+-- GROUP BY grupo_edad, sexo
+-- ORDER BY total_personas_involucradas DESC;
 
-
-
-SELECT
-    CASE
-        WHEN age < 23 THEN 'Adolescente'
-        WHEN age BETWEEN 23 AND 55 THEN 'Adulto'
-        ELSE 'Adulto mayor'
-    END AS grupo_edad,
-    sex AS sexo,
-    COUNT(*) AS total_personas_involucradas
-FROM people
-JOIN driver_info 
-    ON people.person_id = driver_info.person_id   -- filtra solo conductores
-WHERE age IS NOT NULL 
-GROUP BY grupo_edad, sexo
-ORDER BY total_personas_involucradas DESC;
-
-SELECT * FROM people where sex = '';
+-- SELECT * FROM people where sex = '';
 
 
 

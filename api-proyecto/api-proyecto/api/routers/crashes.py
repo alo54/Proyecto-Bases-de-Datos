@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from api.models.crashes import CreateCrash, ReadCrash
 from db.entities.crashes import Crash
@@ -30,6 +31,7 @@ class CrashesRouter:
 
     def get(self, crash_id: int, request: Request):
         db: Session = request.state.db_session
+        self.logger.info(f"Fetching crash with ID: {crash_id}")
         crash = db.query(Crash).get(crash_id)
         if not crash:
             return JSONResponse(status_code=404, content={"error_description": "Not found"})
