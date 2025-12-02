@@ -28,7 +28,7 @@ class VehicleModelsRouter:
 
     def list(self, request: Request):
         db: Session = request.state.db_session
-        self.logger.info("Listing all vehicle models")
+        self.logger.info("Listing all vehicle specs")
         return db.query(VehicleModels).all()
 
     def get(self, vehicle_id: int, request: Request):
