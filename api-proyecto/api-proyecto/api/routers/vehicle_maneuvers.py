@@ -26,10 +26,10 @@ class VehicleManeuversRouter:
         self.router.add_api_route("/{vehicle_id}", self.update, methods=["PUT"], response_model=ReadVehicleManeuver)
         self.router.add_api_route("/{vehicle_id}", self.delete, methods=["DELETE"])
 
-    def list(self, request: Request):
+    def list(self, request: Request, skip: int = 0, limit: int = 100):
         db: Session = request.state.db_session
-        self.logger.info("Listing all vehicle maneuvers")
-        return db.query(VehicleManeuvers).all()
+        self.logger.info(f"Listing vehicle_maneuvers: skip={skip}, limit={limit}")
+        return db.query(VehicleManeuvers).offset(skip).limit(limit).all()
 
     def get(self, vehicle_id: int, request: Request):
         db: Session = request.state.db_session
