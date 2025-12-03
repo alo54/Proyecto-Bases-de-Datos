@@ -19,20 +19,20 @@ class PeopleRouter:
         self.router = APIRouter(prefix="/people", tags=["People"])
 
         self.router.add_api_route("/", self.list, methods=["GET"], response_model=list[ReadPeople])
-        self.router.add_api_route("/{people_id}", self.get, methods=["GET"], response_model=ReadPeople)
+        self.router.add_api_route("/{person_id}", self.get, methods=["GET"], response_model=ReadPeople)
         self.router.add_api_route("/", self.create, methods=["POST"], response_model=ReadPeople)
-        self.router.add_api_route("/{people_id}", self.update, methods=["PUT"], response_model=ReadPeople)
-        self.router.add_api_route("/{people_id}", self.delete, methods=["DELETE"])
+        self.router.add_api_route("/{person_id}", self.update, methods=["PUT"], response_model=ReadPeople)
+        self.router.add_api_route("/{person_id}", self.delete, methods=["DELETE"])
 
     def list(self, request: Request):
         db_session: Session = request.state.db_session
         self.logger.info("Querying all people")
         return db_session.query(People).all()
 
-    def get(self, people_id: int, request: Request):
+    def get(self, person_id: str, request: Request):
         db_session: Session = request.state.db_session
-        self.logger.info(f"Getting person with id: {people_id}")
-        record = db_session.query(People).get(people_id)
+        self.logger.info(f"Getting person with id: {person_id}")
+        record = db_session.query(People).get(person_id)
         if not record:
             return JSONResponse(status_code=404, content={"error_description": "Not found"})
         return record
@@ -44,9 +44,9 @@ class PeopleRouter:
         db_session.flush()
         return new_record
 
-    def update(self, people_id: int, data: CreatePeople, request: Request):
+    def update(self, person_id: str, data: CreatePeople, request: Request):
         db_session: Session = request.state.db_session
-        record = db_session.query(People).get(people_id)
+        record = db_session.query(People).get(person_id)
         if not record:
             raise HTTPException(status_code=404, detail="Not found")
 
@@ -56,9 +56,9 @@ class PeopleRouter:
         db_session.flush()
         return record
 
-    def delete(self, people_id: int, request: Request):
+    def delete(self, person_id: str, request: Request):
         db_session: Session = request.state.db_session
-        record = db_session.query(People).get(people_id)
+        record = db_session.query(People).get(person_id)
         if not record:
             raise HTTPException(status_code=404, detail="Not found")
 
