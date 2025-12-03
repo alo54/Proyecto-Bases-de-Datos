@@ -26,10 +26,10 @@ class CrashInjuriesRouter:
         self.router.add_api_route("/{crash_record_id}", self.update, methods=["PUT"], response_model=ReadCrashInjuries)
         self.router.add_api_route("/{crash_record_id}", self.delete, methods=["DELETE"])
 
-    def list(self, request: Request):
+    def list(self, request: Request, skip: int = 0, limit: int = 100):
         db: Session = request.state.db_session
-        self.logger.info("Listing all crash_injuries records")
-        return db.query(CrashInjuries).all()
+        self.logger.info(f"Listing crash_injuries: skip={skip}, limit={limit}")
+        return db.query(CrashInjuries).offset(skip).limit(limit).all()
 
     def get(self, crash_record_id: str, request: Request):
         db: Session = request.state.db_session

@@ -23,11 +23,11 @@ class DriverInfoRouter:
         self.router.add_api_route("/", self.create, methods=["POST"], response_model=ReadDriverInfo)
         self.router.add_api_route("/{person_id}", self.update, methods=["PUT"], response_model=ReadDriverInfo)
         self.router.add_api_route("/{person_id}", self.delete, methods=["DELETE"])
-
-    def list(self, request: Request):
-        db_session: Session = request.state.db_session
-        self.logger.info("Listing all driver info records")
-        return db_session.query(DriverInfo).all()
+    
+    def list(self, request: Request, skip: int = 0, limit: int = 100):
+        db: Session = request.state.db_session
+        self.logger.info(f"Listing driver_info: skip={skip}, limit={limit}")
+        return db.query(DriverInfo).offset(skip).limit(limit).all()
 
     def get(self, person_id: str, request: Request):
         db_session: Session = request.state.db_session

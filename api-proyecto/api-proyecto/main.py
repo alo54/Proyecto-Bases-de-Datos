@@ -65,6 +65,12 @@ def root():
         "endpoints": 11
     }
 
+#MONTAR LA API CON:
 #uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+#Abrir puerto en firewall de Windows con PowerShell:
 #New-NetFirewallRule -DisplayName "Permitir Puerto 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+
+#Cerrar puerto en firewall de Windows con PowerShell:
 #Remove-NetFirewallRule -DisplayName "Permitir Puerto 8000"
+

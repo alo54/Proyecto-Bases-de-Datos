@@ -23,11 +23,11 @@ class PeopleRouter:
         self.router.add_api_route("/", self.create, methods=["POST"], response_model=ReadPeople)
         self.router.add_api_route("/{person_id}", self.update, methods=["PUT"], response_model=ReadPeople)
         self.router.add_api_route("/{person_id}", self.delete, methods=["DELETE"])
-
-    def list(self, request: Request):
-        db_session: Session = request.state.db_session
-        self.logger.info("Querying all people")
-        return db_session.query(People).all()
+    
+    def list(self, request: Request, skip: int = 0, limit: int = 100):
+        db: Session = request.state.db_session
+        self.logger.info(f"Listing people: skip={skip}, limit={limit}")
+        return db.query(People).offset(skip).limit(limit).all()
 
     def get(self, person_id: str, request: Request):
         db_session: Session = request.state.db_session

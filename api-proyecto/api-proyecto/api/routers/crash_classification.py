@@ -23,11 +23,11 @@ class CrashClassificationRouter:
         self.router.add_api_route("/", self.create, methods=["POST"], response_model=ReadCrashClassification)
         self.router.add_api_route("/{crash_record_id}", self.update, methods=["PUT"], response_model=ReadCrashClassification)
         self.router.add_api_route("/{crash_record_id}", self.delete, methods=["DELETE"])
-
-    def list(self, request: Request):
-        db_session: Session = request.state.db_session
-        self.logger.info("Listing all crash classification records")
-        return db_session.query(CrashClassification).all()
+    
+    def list(self, request: Request, skip: int = 0, limit: int = 100):
+        db: Session = request.state.db_session
+        self.logger.info(f"Listing crash_classification: skip={skip}, limit={limit}")
+        return db.query(CrashClassification).offset(skip).limit(limit).all()
 
     def get(self, crash_record_id: str, request: Request):
         db_session: Session = request.state.db_session
