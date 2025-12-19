@@ -155,6 +155,7 @@ GROUP BY c.street_name
 ORDER BY total_crashes DESC
 LIMIT 10;
 ```
+![Calles con más accidentes](figures/calles.png)
 
 3. Proporción de accidentes por condición de iluminación
 
