@@ -310,7 +310,7 @@ SELECT
     (SELECT COUNT(*) FROM drivers_alcohol) AS alcohol_crashes,
     (SELECT COUNT(*) FROM drivers_phone)   AS phone_crashes;
 ```
-![Casos de alcohol vs uso de celular](alcoholvscel.png)
+![Casos de alcohol vs uso de celular](figures/alcoholvscel.png)
 
 ### IV. Condiciones del vehículo
 11. Límite de velocidad
