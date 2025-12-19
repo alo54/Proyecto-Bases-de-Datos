@@ -1,6 +1,13 @@
 # Proyecto: Análisis de accidentes de tráfico en Chicago
 
-## Descripción general v2.0
+## Integrantes
+- Regina Cabral
+- Alondra Valdivia
+- Gabriel Navarro
+- Iker Navarro
+- Ricardo Limón
+
+## Descripción general 
 
 El conjunto de datos de “Accidentes de Tráfico de Chicago” es un registro público que contiene información detallada de cada choque reportable dentro de los límites de la ciudad y bajo la jurisdicción del Departamento de Policía de Chicago (CPD). Incluye circunstancias, causas y consecuencias de los incidentes viales, desde daños materiales menores hasta colisiones fatales.
 
@@ -117,3 +124,348 @@ El objetivo del análisis es identificar **factores de riesgo** y **patrones de 
 - **Comunicación Responsable:** Presentar hallazgos con contexto; un alto número de accidentes puede reflejar mayor tráfico y no necesariamente un diseño peligroso de la vía.
 
 ---
+## Limpieza de datos
+El proceso de limpieza de datos se llevó a cabo de manera incremental y sistemática sobre cada una de las tablas creadas, con el objetivo de garantizar consistencis, eliminar valores inválidos y estandarizar los formatos antes de realizar análisis y consultas complejas. 
+
+Uno de los principales problemas detectados fue a presencia de valores nulos no explícitos, es decir, cadenas vacías (`''`) o valores de texto que representaban ausencia de información. Para solucionarlo, se aplicaron funciones como `NULLIF`, `BTRIM`  y `COALESCE`, tranformando estos registros en valores `NULL` reales dentro de PostgresSQL.
+
+En la tabla **`people`** se normalizaron atributos como **`people_type`**, **`sex`**, **`safety_equipment`**,**`airbag_deployed`** e **`injuty_classification`**, eliminando cadenas vacías y estandarizando los valores. De manera similar, en la tabla **`vehicle`** se limpiaron campos textuales como **`unit_type`**, **`make`**, **`model`** y **`vehice_type`**.
+
+Para las tablas especializadas de vehiculos (**`vehicle_models`**, **`vehicle_maneuvers`**, **`vehicle_violations`**) se aplicaron transformaciones adicionales para eliminar espacios innecesarios y corregir valores inválidos, garantizando que los atributos categóricos fueran consistentes y utilizables en análisis posteriores. 
+
+En el caso de **`drive_info`**, se realizó una limpieza más exhaustiva debido a la variedad de valores en atributos como **`driver_action`**, **`driver_vision`**, **`physical_condition`** y **`druvers_license_class`**. Se eliminaron caracteres no válidos, se estandarizó el uso de mayúsculas y se validaron las expresiones mediante expresiones regulares para asegurar la coherencia de los registros. 
+
+Por último, en **`crash_injuries`** se detectó la presencia de valores nulos en campos númericos críticos. Para evitar incosistencias en los cálculos, los valores fueron sustituidos por ceros utilizando **`COALESCE`**, bajo el supuesto de que la ausencia de registros implicaba la inexistencia de lesiones de ese tipo. 
+
+Al concluir este proceso, se obtuvo un conjunto de tablas con datos limpios, correctamente tipados y coherente entre sí, listos para su análisis y para garantizar integridad durante la normalización. 
+
+---
+## Normalización de datos
+
+La estructura final del modelos de datos refleja un proceso de normalización que alcanza la cuarta forma normal (4NF), al eliminar redundancias y asegurar que cada atributo depende únicamente de la llave primaria de su tabla. 
+
+Cada tabla representa una entidad claramente definida: 
+- **Crashes** : información base del accidente.
+- **Crash_date**, **crash_circumstances**, **crash_injuries**, **crash_classification**: descomposición funcional del accidente en subconjuntos lógicos de atributos.
+- **Vehicle** y sus tablas asociadas: modelan de forma independiente a cada vehículo involucrado.
+- **People** y driver_info: separan información general de personas de informacion exclusiva de conductores.
+
+Las dependencias funcionales principales observadas incluyen: 
+- `{crash_record_id} →` atributos del accidente y sus subcomponentes.
+- `{vehicle_id} →` atributos propios del vehículo
+- `{person_id} →` atributos personales y, en el caso de conductores, atributos específicos de conducción.
+
+La separación de información permitió eliminar duplicidad de datos, reducir anomalías de actualización y facilitar la extensión futura del modelo. El uso de llaves foráneas asegura integridad referencial entre las entidades, mientras que la ausencia de dependencias parciales no transitivas en las tablas confirma el cumplimiento de los criterios de normalización establecidos. 
+
+Como resultado, se obtuvo un esquema relacional robusto, flexible y alineado con las mejores prácticas de diseño de base de datos relacionales para análisis de eventos complejos como accidentes de tránsito. 
+
+<img width="1280" height="498" alt="image" src="https://github.com/user-attachments/assets/444a6459-e7e1-4ab1-b94a-f8076b2957bf" />
+
+## Carga inicial de datos y analisis preliminar
+
+Para la carga inicial de datos se decidió utilizar un enfoque en el cual la información original del conjunto de datos de accidentes de tránsito se separó desde un inicio en múltiples tablas relacionadas. Esta decision se tomó debido a la alta heterogeneidad de los atributos y a la clara existencia de entidades conceptuales distintas, como accidentes, vehículos y personas involucradas. 
+
+El proceso comenzó con la creación de la tabla principal **'crashes'**, la cual concentra la información base de cada accidente, identificada de manera única por el atributo **'crash_record_id'**. Esta tabla almacena información temporal y espacial del evento, como la fecha del accidente, coordenadas geográficas y la vialidad asociada. 
+
+Posteriormente, a partir del identificados del accidente, se crearon tablas auxiliares especializdas que capturan distintos aspectos del mismo evento: 
+-**'crash_date'**, que descompone la fecha del accidente en día de la semana y mes facilitando análisis temporales. 
+-**'crash_circumstances'**, que almacena condiciones del entorno vial y del accidente (dispositivos de control de tráfico, clima, iluminación, número de carriles, velocidad permitida, etc.).
+-**'crash_injuties'**, que concentra la información relacionada con lesiones resultantes del accidente.
+-**'crash_classification'**, que clasifica el tipo de choque, causas contribuyentes y si se trató de un evento de tipo hit-and-run
+
+Todas estas tablas mantienen una relación uno a uno con la tabla **'crashes'** mediante el uso de llaves foráneas sobre **'crash_record_id'**, garantizando coherencia referencial desde la etapa inicial de carga. 
+
+De forma análoga, se creó la entidad **'vehicle'**, que representa a cada vehículo involucrado en un accidente. Cada vehículo se identifica mediante **'vehicle_id'**, y se relaciona con un accidente específico a través de **'crash_record_id'**. A partir de esta tabla se derivaron estructuras adicionales para capturar características específicas:
+-**'vehicle_models'**, para información estructural del vehículo.
+-**'vehicle_maneuvers'**, para registrar la maniobra realizada al momento del accidente. 
+-**'vehicle_violations'**, que indica infracciones o condiciones especiales del vehículo. 
+
+Finalmente, se creó la tabla **'people'**, que contiene la información de las personas involucradas en los accidentes, junto con la tabla **'driver_info'**, que especializa la infomación únicamnete para aquellas personas que actuaban como conductores. Estas tablas se relacionan tanto con **'crashes'** como con **'vehicle'**, permitiendo modelar adecuadamente la participación de cada individuo en el evento. 
+
+Este diseño inicial permitió contar desde el incio con una base de datos estructurada, coherente y preparada para un proceso sistemático de limpieza y normalización
+
+---
+## Limpieza y Normalización de datos
+
+## Análisis de datos a través de consultas SQL
+Realizamos varias consultas de SQL para el análisis de la base de datos, descubriendo información valiosa para identificar y concluir acerca de factores de riesgo y patrones de accidentes.
+
+### I. Condiciones viales
+1. Accidentes por defectos de la vía (road deffects)
+
+```sql
+SELECT
+    cc.road_defect,
+    COUNT(DISTINCT c.crash_record_id) AS total_crashes
+FROM crashes c
+JOIN crash_circumstances cc
+    ON c.crash_record_id = cc.crash_record_id
+WHERE cc.road_defect IS NOT NULL
+GROUP BY cc.road_defect
+ORDER BY total_crashes DESC;
+```
+
+2. Calles con más accidentes
+
+```sql
+SELECT
+    c.street_name,
+    COUNT(*) AS total_crashes
+FROM CRASHES c
+GROUP BY c.street_name
+ORDER BY total_crashes DESC
+LIMIT 10;
+```
+![Calles con más accidentes](figures/calles.png)
+
+3. Proporción de accidentes por condición de iluminación
+
+```sql
+SELECT
+    cc.lighting_condition,
+    COUNT(*) AS total_crashes,
+    COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS crash_share
+FROM crash_circumstances cc
+WHERE cc.lighting_condition IS NOT NULL
+GROUP BY cc.lighting_condition
+ORDER BY crash_share DESC;
+```
+Donde crash_share representa la proporción de accidentes asociada a cada condición de iluminación respecto al total.
+![Condición de iluminación](figures/iluminacion.png)
+
+### II. Condiciones de clima y fecha
+4. Condiciones climáticas asociadas a más accidentes
+
+```sql
+SELECT 
+    cc.weather_condition,
+    COUNT(*) AS total_crashes
+FROM CRASHES c
+JOIN CRASH_CIRCUMSTANCES cc
+    ON c.crash_record_id = cc.crash_record_id
+GROUP BY cc.weather_condition
+ORDER BY total_crashes DESC;
+```
+![Accidentes por clima](figures/clima_choques.png)
+
+5. Severidad de lesiones por condición climática
+   
+```sql
+SELECT
+    cc.weather_condition,
+    SUM(ci.injuries_fatal) AS fatalities,
+    SUM(ci.injuries_incapacitating) AS severe_injuries
+FROM CRASHES c
+JOIN CRASH_CIRCUMSTANCES cc
+    ON c.crash_record_id = cc.crash_record_id
+JOIN CRASH_INJURIES ci
+    ON c.crash_record_id = ci.crash_record_id
+GROUP BY cc.weather_condition
+ORDER BY fatalities DESC;
+```
+
+6. Accidentes por día de la semana y mes 
+
+```sql
+SELECT
+    cd.crash_day_of_week,
+    cd.crash_month,
+    COUNT(*) AS total_crashes
+FROM CRASH_DATE cd
+GROUP BY cd.crash_day_of_week, cd.crash_month
+ORDER BY total_crashes DESC;
+```
+
+7. Horario con más accidentes y lesiones
+   
+```sql
+SELECT
+    CASE
+      WHEN EXTRACT(HOUR FROM c.incident_date) BETWEEN 0 AND 5  THEN 'Madrugada (0-5)'
+      WHEN EXTRACT(HOUR FROM c.incident_date) BETWEEN 6 AND 11 THEN 'Mañana (6-11)'
+      WHEN EXTRACT(HOUR FROM c.incident_date) BETWEEN 12 AND 17 THEN 'Tarde (12-17)'
+      ELSE 'Noche (18-23)'
+    END AS time_band,
+    COUNT(*) AS total_crashes,
+    SUM(ci.injuries_fatal
+        + ci.injuries_incapacitating
+        + ci.injuries_other) AS total_injuries
+FROM crashes c
+JOIN crash_injuries ci
+  ON c.crash_record_id = ci.crash_record_id
+GROUP BY time_band
+ORDER BY total_injuries DESC;
+```
+
+### III. Condiciones del conductor
+8. Accidentes con alcohol involucrado y severidad del choque
+
+```sql
+SELECT
+    COUNT(DISTINCT di.person_id) AS drivers_with_alcohol,
+    SUM(ci.injuries_fatal) AS fatalities,
+    SUM(ci.injuries_incapacitating) AS severe_injuries,
+    SUM(ci.injuries_other) AS minor_injuries
+FROM driver_info di
+JOIN people p
+    ON di.person_id = p.person_id
+JOIN crash_injuries ci
+    ON p.crash_record_id = ci.crash_record_id
+WHERE di.bac_result_value > 0;
+```
+
+9. Edad promedio de conductores en choques con y sin fallecidos
+
+```sql
+WITH fatal_flag AS (
+	SELECT crash_record_id,
+		   CASE WHEN injuries_fatal > 0 THEN 1 ELSE 0 END AS fatal_crash
+	FROM crash_injuries
+)
+SELECT 
+	CASE WHEN f.fatal_crash = 1 THEN 'CHOQUE CON FALLECIDOS'
+		ELSE 'CHOQUE SIN FALLECIDOS' END AS tipo_choque,
+	AVG(p.age) AS avg_driver_age,
+	COUNT(*) AS total_drivers
+FROM people p
+JOIN fatal_flag f USING (crash_record_id)
+WHERE p.person_type = 'DRIVER'
+GROUP BY f.fatal_crash
+ORDER BY avg_driver_age;
+```
+![Edad de conductores](figures/edad.png)
+
+10. Uso de teléfono vs consumo de alcohol
+
+```sql
+WITH drivers_alcohol AS (
+    SELECT DISTINCT c.crash_record_id
+    FROM crashes c
+    JOIN people p
+        ON c.crash_record_id = p.crash_record_id
+    JOIN driver_info di
+        ON p.person_id = di.person_id
+    WHERE p.person_type = 'DRIVER'
+      AND (
+            di.bac_result_value > 0
+         OR di.physical_condition = 'IMPAIRED - ALCOHOL'
+         OR di.physical_condition = 'HAD BEEN DRINKING'
+         OR di.physical_condition = 'IMPAIRED - ALCOHOL AND DRUGS'
+      )
+),
+drivers_phone AS (
+    SELECT DISTINCT c.crash_record_id
+    FROM crashes c
+    JOIN people p
+        ON c.crash_record_id = p.crash_record_id
+    JOIN driver_info di
+        ON p.person_id = di.person_id
+    WHERE p.person_type = 'DRIVER'
+      AND (
+            di.cell_phone_use = TRUE
+         OR di.driver_action = 'CELL PHONE USE OTHER THAN TEXTING'
+         OR di.driver_action = 'TEXTING'
+      )
+)
+SELECT
+    (SELECT COUNT(*) FROM drivers_alcohol) AS alcohol_crashes,
+    (SELECT COUNT(*) FROM drivers_phone)   AS phone_crashes;
+```
+![Casos de alcohol vs uso de celular](figures/alcoholvscel.png)
+
+### IV. Condiciones del vehículo
+11. Límite de velocidad
+
+```sql
+SELECT
+    CASE
+      WHEN cc.posted_speed_limit < 30 THEN '<30'
+      WHEN cc.posted_speed_limit BETWEEN 30 AND 39 THEN '30–39'
+      WHEN cc.posted_speed_limit BETWEEN 40 AND 49 THEN '40–49'
+      WHEN cc.posted_speed_limit BETWEEN 50 AND 59 THEN '50–59'
+      ELSE '60+'
+    END AS speed_band,
+    COUNT(*) AS total_crashes,
+    SUM(ci.injuries_fatal
+        + ci.injuries_incapacitating
+        + ci.injuries_other)        AS total_injuries
+FROM crash_circumstances cc
+JOIN crash_injuries ci
+  ON cc.crash_record_id = ci.crash_record_id
+GROUP BY speed_band
+ORDER BY speed_band DESC;
+```
+
+12. Choques por tipo de uso del vehículo
+
+```sql
+SELECT COALESCE(vs.vehicle_use, 'UNKNOWN') AS vehicle_use, COUNT(DISTINCT v.crash_record_id) AS total_crashes
+FROM vehicle v
+LEFT JOIN vehicle_specs vs 
+ON v.vehicle_id= vs.vehicle_id
+GROUP BY vehicle_use
+ORDER BY total_crashes DESC;
+```
+
+13. Accidentes por marca y modelo
+
+```sql
+SELECT
+    v.make,
+    v.model,
+    COUNT(DISTINCT v.crash_record_id) AS total_crashes
+FROM vehicle v
+WHERE v.make IS NOT NULL
+  AND v.model IS NOT NULL
+GROUP BY v.make, v.model
+ORDER BY total_crashes DESC
+LIMIT 10;
+```
+![Modelos de vehículo](figures/modelo.png)
+
+### V. Hotspots
+14. Identificación de hotspots
+
+```sql
+SELECT
+    ROUND(latitude::numeric, 3)  AS lat_grid,
+    ROUND(longitude::numeric, 3) AS lon_grid,
+    COUNT(*) AS total_crashes
+FROM crashes
+WHERE latitude IS NOT NULL
+  AND longitude IS NOT NULL
+GROUP BY lat_grid, lon_grid
+ORDER BY total_crashes DESC;
+```
+![Mapa de calor de accidentes](figures/mapacalor.png)
+
+15.  Factores dominantes de cada hotspot
+
+```sql
+WITH grid AS (
+    SELECT
+        ROUND(crashes.latitude::numeric, 3)  AS lat_grid,
+        ROUND(crashes.longitude::numeric, 3) AS lon_grid,
+        crashes.crash_record_id
+    FROM crashes crashes
+    WHERE crashes.latitude IS NOT NULL
+      AND crashes.longitude IS NOT NULL
+)
+SELECT
+    grid.lat_grid,
+    grid.lon_grid,
+    COUNT(*) AS total_crashes,
+    MODE() WITHIN GROUP (ORDER BY crash_circumstances.weather_condition) AS 					most_common_weather,
+    MODE() WITHIN GROUP (ORDER BY crash_circumstances.lighting_condition)     AS most_common_lighting,
+    MODE() WITHIN GROUP (ORDER BY crash_classification.crash_type)             AS most_common_crash_type
+FROM grid 
+JOIN crash_circumstances 
+  ON grid.crash_record_id = crash_circumstances.crash_record_id
+JOIN crash_classification 
+  ON grid.crash_record_id = crash_classification.crash_record_id
+GROUP BY grid.lat_grid, grid.lon_grid
+HAVING COUNT(*) >= 30
+ORDER BY total_crashes DESC
+LIMIT 30;
+```
+
