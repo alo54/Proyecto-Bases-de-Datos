@@ -124,6 +124,30 @@ El objetivo del análisis es identificar **factores de riesgo** y **patrones de 
 - **Comunicación Responsable:** Presentar hallazgos con contexto; un alto número de accidentes puede reflejar mayor tráfico y no necesariamente un diseño peligroso de la vía.
 
 ---
+## Carga inicial de datos y analisis preliminar
+
+Para la carga inicial de datos se deicidio utilizar un enfoque en el cual la información original del conjunto de datos de accidentes de tránsito se separó desde un inicio en múltiples tablas relaciondas. Esta decision se tomó debido a la alta heterogeneidad de los atributos y a la clara existencia de entidades conceptuales distintas, como accidentes, vehículos y personas involucradas. 
+
+El proceso comenzó con la creación de la tabla principal **'crashes'**, la cual concentra la información base de cada accidente, identificada de manera única por el etributo **'crash_record_id'**. Esta tabla almacena información temporal y espacial del evento, como la fecha del accidente, coordenadas geográficas y la vialidad asociada. 
+
+Posteriormente, a partir del identificados del accidente, se crearon tablas auxiliares especializdas que capturan distinos aspectos del mismo evento: 
+-**'crash_date'**, que descompone la fecha del accidente en día de la semana y mes facilitando análisis temporales. 
+-**'crash_circumstances'**, que almacena condiciones del entorno vial y del accidente (dispositivos de control de tráfico, clima, iluminación, número de carriles, velocidad permitida, etc.).
+-**'crash_injuties'**, que concentra la información relacionada con lesiones resultantes del accidente.
+-**'crash_classification'**, que clasifica el tipo de choque, causas contribuyentes y si se trató de un evento de tipo hit-and-run
+
+Todas estas tablas mantienen una relación uno a uno con la tabla **'crashes'** mediante el uso de llaves foráneas sobre **'crash_record_id'**, garantizando coherencia referencial desde la etapa inicial de carga. 
+
+De forma análoga, se creó la entidad **'vehicle'**, que representa a cada vehículo involucrado en un accidente. Cadavehículo se identiica mediante **'vehicle_id'** y se relaciona con un acciednte específico a través de **'crash_record_id'**. A partir de esta tabla se derivaron estructuras adicionales para capturar características específicas:
+-**'vehicle_models'**, para información estructural del vehículo.
+-**'vehicle_maneuvers'**, para registrar la maniobra realizada al momento del accidente. 
+-**'vehicle_violations'**, que indica infracciones o condiciones especiales del vehículo. 
+
+Finalmente, se creó la tabla **'people'**, que contiene la información de las personas involucradas en los accidentes, junto con la tabla **'driver_info'**, que especializa la infomación únicamnete para aquellas personas que actuaban como conductores. Estas tablas se relacionan tanto con **'crashes'** como con **'vehicle'**, permitiendo modelar adecuadamente la participación de cada individuo en el evento. 
+
+Este diseño inicial permitió contar desde el incio con una base de datos estructurada, coherente y preparada para un proceso sistemático de limpieza y normalización
+
+---
 ## Limpieza y Normalización de datos
 
 ## Análisis de datos a través de consultas SQL
