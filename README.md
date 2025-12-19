@@ -170,7 +170,7 @@ GROUP BY cc.lighting_condition
 ORDER BY crash_share DESC;
 ```
 Donde crash_share representa la proporción de accidentes asociada a cada condición de iluminación respecto al total.
-![Proporción de accidentes por iluminación](figures/iluminación.png)
+![Condición de iluminación](figures/iluminacion.png)
 
 ### II. Condiciones de clima y fecha
 4. Condiciones climáticas asociadas a más accidentes
@@ -185,7 +185,7 @@ JOIN CRASH_CIRCUMSTANCES cc
 GROUP BY cc.weather_condition
 ORDER BY total_crashes DESC;
 ```
-![Condiciones de clima](figures/clima/choques.png)
+![Accidentes por clima](figures/clima_choques.png)
 
 5. Severidad de lesiones por condición climática
    
@@ -272,7 +272,7 @@ WHERE p.person_type = 'DRIVER'
 GROUP BY f.fatal_crash
 ORDER BY avg_driver_age;
 ```
-![Edad promedio](edad.png)
+![Edad de conductores](figures/edad.png)
 
 10. Uso de teléfono vs consumo de alcohol
 
@@ -360,7 +360,7 @@ GROUP BY v.make, v.model
 ORDER BY total_crashes DESC
 LIMIT 10;
 ```
-![Modelo y marca](modelo.png)
+![Modelos de vehículo](figures/modelo.png)
 
 ### V. Hotspots
 14. Identificación de hotspots
@@ -376,6 +376,7 @@ WHERE latitude IS NOT NULL
 GROUP BY lat_grid, lon_grid
 ORDER BY total_crashes DESC;
 ```
+![Mapa de calor de accidentes](figures/mapa_calor.png)
 
 15.  Factores dominantes de cada hotspot
 
