@@ -1,6 +1,13 @@
 # Proyecto: Análisis de accidentes de tráfico en Chicago
 
-## Descripción general v2.0
+## Integrantes
+- Regina Cabral
+- Alondra Valdivia
+- Gabriel Navarro
+- Iker Navarro
+- Ricardo Limón
+
+## Descripción general 
 
 El conjunto de datos de “Accidentes de Tráfico de Chicago” es un registro público que contiene información detallada de cada choque reportable dentro de los límites de la ciudad y bajo la jurisdicción del Departamento de Policía de Chicago (CPD). Incluye circunstancias, causas y consecuencias de los incidentes viales, desde daños materiales menores hasta colisiones fatales.
 
@@ -117,3 +124,48 @@ El objetivo del análisis es identificar **factores de riesgo** y **patrones de 
 - **Comunicación Responsable:** Presentar hallazgos con contexto; un alto número de accidentes puede reflejar mayor tráfico y no necesariamente un diseño peligroso de la vía.
 
 ---
+## Limpieza y Normalización de datos
+
+## Análisis de datos a través de consultas SQL
+Realizamos varias consultas de SQL para el análisis de la base de datos, descubriendo información valiosa para identificar y concluir acerca de factores de riesgo y patrones de accidentes 
+
+### I. Condiciones Viales
+1. Accidentes por defectos de la vía (road deffects)
+
+```sql
+SELECT
+    cc.road_defect,
+    COUNT(DISTINCT c.crash_record_id) AS total_crashes
+FROM crashes c
+JOIN crash_circumstances cc
+    ON c.crash_record_id = cc.crash_record_id
+WHERE cc.road_defect IS NOT NULL
+GROUP BY cc.road_defect
+ORDER BY total_crashes DESC;
+
+2. Calles con más accidentes
+
+```sql
+SELECT
+    c.street_name,
+    COUNT(*) AS total_crashes
+FROM CRASHES c
+GROUP BY c.street_name
+ORDER BY total_crashes DESC
+LIMIT 10;
+
+3. Proporción de accidentes por condición de iluminación
+
+```sql
+SELECT
+    cc.lighting_condition,
+    COUNT(*) AS total_crashes,
+    COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS crash_share
+FROM crash_circumstances cc
+WHERE cc.lighting_condition IS NOT NULL
+GROUP BY cc.lighting_condition
+ORDER BY crash_share DESC;
+Donde crash_share representa la proporción de accidentes asociada a cada condición de iluminación respecto al total.
+
+
+
