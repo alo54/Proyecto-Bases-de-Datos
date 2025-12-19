@@ -130,7 +130,7 @@ El objetivo del análisis es identificar **factores de riesgo** y **patrones de 
 Realizamos varias consultas de SQL para el análisis de la base de datos, descubriendo información valiosa para identificar y concluir acerca de factores de riesgo y patrones de accidentes 
 
 ### I. Condiciones Viales
-1. Accidentes por defectos de la vía (road deffects)
+### 1. Accidentes por defectos de la vía (road deffects)
 
 ```sql
 SELECT
@@ -142,8 +142,9 @@ JOIN crash_circumstances cc
 WHERE cc.road_defect IS NOT NULL
 GROUP BY cc.road_defect
 ORDER BY total_crashes DESC;
+```
 
-2. Calles con más accidentes
+### 2. Calles con más accidentes
 
 ```sql
 SELECT
