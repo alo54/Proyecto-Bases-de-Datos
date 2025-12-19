@@ -376,7 +376,7 @@ WHERE latitude IS NOT NULL
 GROUP BY lat_grid, lon_grid
 ORDER BY total_crashes DESC;
 ```
-![Mapa de calor de accidentes](figures/mapa_calor.png)
+![Mapa de calor de accidentes](figures/mapacalor.png)
 
 15.  Factores dominantes de cada hotspot
 
