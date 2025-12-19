@@ -125,49 +125,49 @@ El objetivo del análisis es identificar **factores de riesgo** y **patrones de 
 
 ---
 ## Limpieza de datos
-El proceso de limpieza de datos se realizó de manera incremental y sistemática sobre cada una de las tablas creadas, con el objetivo de garantizar consistencis, eliminar valores inválidos y estandarizar los formatos antes de realizar análisis o consultas complejas. 
+El proceso de limpieza de datos se llevó a cabo de manera incremental y sistemática sobre cada una de las tablas creadas, con el objetivo de garantizar consistencis, eliminar valores inválidos y estandarizar los formatos antes de realizar análisis y consultas complejas. 
 
-Uno de los principales problemas detectados fue a presencia de valores nulos no explícitos, es decir, cadenas vacias (`''`) o valores de texto que representaban auencia de información. Para solucionarlo, se aplicaron funciones como `NULLIF`, `BTRIM`  y `COALESCE`, tranformando estos registros en valores `NULL` reales dentro de PostgresSQL.
+Uno de los principales problemas detectados fue a presencia de valores nulos no explícitos, es decir, cadenas vacías (`''`) o valores de texto que representaban ausencia de información. Para solucionarlo, se aplicaron funciones como `NULLIF`, `BTRIM`  y `COALESCE`, tranformando estos registros en valores `NULL` reales dentro de PostgresSQL.
 
-En la tabla **`people`** se normalizaron atributos como **`people_type`**, **`sex`**, **`safety_equipment`**,**`airbag_deployed`** e **`injuty_classification`**, eliminando cadenas vacías y estandarizando los valoes. De manera similar en la tabla **`vehicle`** se limpiaron campos textuales como **`unit_type`**, **`make`**, **`model`** y **`vehice_type`**.
+En la tabla **`people`** se normalizaron atributos como **`people_type`**, **`sex`**, **`safety_equipment`**,**`airbag_deployed`** e **`injuty_classification`**, eliminando cadenas vacías y estandarizando los valores. De manera similar, en la tabla **`vehicle`** se limpiaron campos textuales como **`unit_type`**, **`make`**, **`model`** y **`vehice_type`**.
 
-Para las tablas especializdas de vehiculos (**`vehicle_models`**, **`vehicle_maneuvers`**, **`vehicle_violations`**) se aplicaron transformaciones adicionales para eliminar espacios innecesarios y corregir valores inválidos, garantizando que los atributos categóricos fueran consistentes y tulizables en análisis posteriores. 
+Para las tablas especializadas de vehiculos (**`vehicle_models`**, **`vehicle_maneuvers`**, **`vehicle_violations`**) se aplicaron transformaciones adicionales para eliminar espacios innecesarios y corregir valores inválidos, garantizando que los atributos categóricos fueran consistentes y utilizables en análisis posteriores. 
 
-En el caso de **`drive_info`**, se realizó una limpieza más exhaustiva debido a la gran diversidad de valores en atributos como **`driver_action`**, **`driver_vision`**, **`physical?condition`** y **`druvers_license_class`**. Se eliminaron caracteres no válidos, se estandarizó el uso de mayúsculas y se validaron expresiones mediante expresiones regulares para asegurar la coherencia de los registros. 
+En el caso de **`drive_info`**, se realizó una limpieza más exhaustiva debido a la variedad de valores en atributos como **`driver_action`**, **`driver_vision`**, **`physical_condition`** y **`druvers_license_class`**. Se eliminaron caracteres no válidos, se estandarizó el uso de mayúsculas y se validaron las expresiones mediante expresiones regulares para asegurar la coherencia de los registros. 
 
-Por último, en **`crash_injuries`** se detectó la presencia de valores nulo en campos númericos críticos. Para evitar incosistencias en los cálculos agregados, estos calores se sustituyeron por ceros utilizando **`COALESCE`**, bajo el supuesto de que la ausencia de registrosimplicaba la inexistencia de lesiones de ese tipo. 
+Por último, en **`crash_injuries`** se detectó la presencia de valores nulos en campos númericos críticos. Para evitar incosistencias en los cálculos, los valores fueron sustituidos por ceros utilizando **`COALESCE`**, bajo el supuesto de que la ausencia de registros implicaba la inexistencia de lesiones de ese tipo. 
 
-Al concluir este proceso, se obtuvo un conjunto de tablas con datos limpios, tipados correctamente y coherente entre sí, litos para su análisis y para garantizar integridad durante la normalización. 
+Al concluir este proceso, se obtuvo un conjunto de tablas con datos limpios, correctamente tipados y coherente entre sí, listos para su análisis y para garantizar integridad durante la normalización. 
 
 ---
 ## Normalización de datos
 
-La estructura final del modelos de datos refleja un proceso de normalizaciòn que alcanza tercera forma nomal (3FN), e incluo se aproxima a BCNF, al eliminar redundancias y asegurar que cada atributo depende únicamente de la llave primario de su tabla. 
+La estructura final del modelos de datos refleja un proceso de normalización que alcanza la cuarta forma normal (4NF), al eliminar redundancias y asegurar que cada atributo depende únicamente de la llave primaria de su tabla. 
 
 Cada tabla representa una entidad claramente definida: 
-- Crashes: información base del accidente.
-- Crash_date, cras_circumstances, crash_injuries, crash_classification: descomposición funcional del accidente en subconjuntos lógicos de atributos.
-- Vehicle y sus tablas asociadas: modelan de forma independiente a cada vehículo involucrado.
-- People y driver_info: separan información genral de personas de informacion exclusiva de conductores.
+- **Crashes** : información base del accidente.
+- **Crash_date**, **crash_circumstances**, **crash_injuries**, **crash_classification**: descomposición funcional del accidente en subconjuntos lógicos de atributos.
+- **Vehicle** y sus tablas asociadas: modelan de forma independiente a cada vehículo involucrado.
+- **People** y driver_info: separan información general de personas de informacion exclusiva de conductores.
 
-Las dependenciasfuncionales principales observadas incluyen: 
+Las dependencias funcionales principales observadas incluyen: 
 - `{crash_record_id} →` atributos del accidente y sus subcomponentes.
 - `{vehicle_id} →` atributos propios del vehículo
 - `{person_id} →` atributos personales y, en el caso de conductores, atributos específicos de conducción.
 
-La separación de información permitió eliminar duplicidad de datos, reducir anomalías de actualización y facilitar la extensión futura del modelo. El uso de llaves foráneas asegura integridad referencial entre las entidades, mientras que la ausencia de dependencias parciale so transitivas en las tablas confirma el cumplimiento de los criterios de normalización establecidos. 
+La separación de información permitió eliminar duplicidad de datos, reducir anomalías de actualización y facilitar la extensión futura del modelo. El uso de llaves foráneas asegura integridad referencial entre las entidades, mientras que la ausencia de dependencias parciales no transitivas en las tablas confirma el cumplimiento de los criterios de normalización establecidos. 
 
-Como resultado, se obtuvo un esquema relacional robusto, flexible y alineado con las mejores prácticas de diseño de base de datos relacionales para análisis de eventos complejos como accidentes de tráncito. 
+Como resultado, se obtuvo un esquema relacional robusto, flexible y alineado con las mejores prácticas de diseño de base de datos relacionales para análisis de eventos complejos como accidentes de tránsito. 
 
 <img width="1280" height="498" alt="image" src="https://github.com/user-attachments/assets/444a6459-e7e1-4ab1-b94a-f8076b2957bf" />
 
 ## Carga inicial de datos y analisis preliminar
 
-Para la carga inicial de datos se deicidio utilizar un enfoque en el cual la información original del conjunto de datos de accidentes de tránsito se separó desde un inicio en múltiples tablas relaciondas. Esta decision se tomó debido a la alta heterogeneidad de los atributos y a la clara existencia de entidades conceptuales distintas, como accidentes, vehículos y personas involucradas. 
+Para la carga inicial de datos se decidió utilizar un enfoque en el cual la información original del conjunto de datos de accidentes de tránsito se separó desde un inicio en múltiples tablas relacionadas. Esta decision se tomó debido a la alta heterogeneidad de los atributos y a la clara existencia de entidades conceptuales distintas, como accidentes, vehículos y personas involucradas. 
 
-El proceso comenzó con la creación de la tabla principal **'crashes'**, la cual concentra la información base de cada accidente, identificada de manera única por el etributo **'crash_record_id'**. Esta tabla almacena información temporal y espacial del evento, como la fecha del accidente, coordenadas geográficas y la vialidad asociada. 
+El proceso comenzó con la creación de la tabla principal **'crashes'**, la cual concentra la información base de cada accidente, identificada de manera única por el atributo **'crash_record_id'**. Esta tabla almacena información temporal y espacial del evento, como la fecha del accidente, coordenadas geográficas y la vialidad asociada. 
 
-Posteriormente, a partir del identificados del accidente, se crearon tablas auxiliares especializdas que capturan distinos aspectos del mismo evento: 
+Posteriormente, a partir del identificados del accidente, se crearon tablas auxiliares especializdas que capturan distintos aspectos del mismo evento: 
 -**'crash_date'**, que descompone la fecha del accidente en día de la semana y mes facilitando análisis temporales. 
 -**'crash_circumstances'**, que almacena condiciones del entorno vial y del accidente (dispositivos de control de tráfico, clima, iluminación, número de carriles, velocidad permitida, etc.).
 -**'crash_injuties'**, que concentra la información relacionada con lesiones resultantes del accidente.
@@ -175,7 +175,7 @@ Posteriormente, a partir del identificados del accidente, se crearon tablas auxi
 
 Todas estas tablas mantienen una relación uno a uno con la tabla **'crashes'** mediante el uso de llaves foráneas sobre **'crash_record_id'**, garantizando coherencia referencial desde la etapa inicial de carga. 
 
-De forma análoga, se creó la entidad **'vehicle'**, que representa a cada vehículo involucrado en un accidente. Cadavehículo se identiica mediante **'vehicle_id'** y se relaciona con un acciednte específico a través de **'crash_record_id'**. A partir de esta tabla se derivaron estructuras adicionales para capturar características específicas:
+De forma análoga, se creó la entidad **'vehicle'**, que representa a cada vehículo involucrado en un accidente. Cada vehículo se identifica mediante **'vehicle_id'**, y se relaciona con un accidente específico a través de **'crash_record_id'**. A partir de esta tabla se derivaron estructuras adicionales para capturar características específicas:
 -**'vehicle_models'**, para información estructural del vehículo.
 -**'vehicle_maneuvers'**, para registrar la maniobra realizada al momento del accidente. 
 -**'vehicle_violations'**, que indica infracciones o condiciones especiales del vehículo. 
@@ -188,7 +188,7 @@ Este diseño inicial permitió contar desde el incio con una base de datos estru
 ## Limpieza y Normalización de datos
 
 ## Análisis de datos a través de consultas SQL
-Realizamos varias consultas de SQL para el análisis de la base de datos, descubriendo información valiosa para identificar y concluir acerca de factores de riesgo y patrones de accidentes 
+Realizamos varias consultas de SQL para el análisis de la base de datos, descubriendo información valiosa para identificar y concluir acerca de factores de riesgo y patrones de accidentes.
 
 ### I. Condiciones viales
 1. Accidentes por defectos de la vía (road deffects)
