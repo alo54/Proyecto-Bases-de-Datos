@@ -1,66 +1,307 @@
+"""
+Router para la tabla people.
+Implementa endpoints CRUD con generación automática de person_id y validaciones.
+"""
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
-from sqlalchemy.orm.session import Session
+from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
-from api.models.people import CreatePeople, ReadPeople
-from db.session import DBSessionManager
+from api.models.people import CreatePeople, ReadPeople, UpdatePeople
 from db.entities.people import People
+from db.session import DBSessionManager
 from util.logger import LoggerSessionManager
+from util.id_generators import generate_person_id
+from util.validators import (
+    validate_foreign_key_exists,
+    validate_age,
+    validate_date_not_future
+)
 
 
 class PeopleRouter:
-    router = APIRouter(prefix="/people", tags=["People"])
+    """
+    Router para gestionar personas involucradas en crashes.
+    
+    Endpoints:
+        GET /people - Lista todas las personas (paginado)
+        GET /people/{person_id} - Obtiene una persona específica
+        POST /people - Crea un nuevo registro (person_id autogenerado)
+        PUT /people/{person_id} - Actualiza una persona
+        DELETE /people/{person_id} - Elimina una persona
+    """
 
     def __init__(self, db_session_manager: DBSessionManager, logger_session_manager: LoggerSessionManager):
         self.db_session_manager = db_session_manager
-        self.logger_session = logger_session_manager
         self.logger = logger_session_manager.get_logger(__name__)
 
         self.router = APIRouter(prefix="/people", tags=["People"])
 
-        self.router.add_api_route("/", self.list, methods=["GET"], response_model=list[ReadPeople])
-        self.router.add_api_route("/{person_id}", self.get, methods=["GET"], response_model=ReadPeople)
-        self.router.add_api_route("/", self.create, methods=["POST"], response_model=ReadPeople)
-        self.router.add_api_route("/{person_id}", self.update, methods=["PUT"], response_model=ReadPeople)
-        self.router.add_api_route("/{person_id}", self.delete, methods=["DELETE"])
+        self.router.add_api_route(
+            "/", 
+            self.list, 
+            methods=["GET"], 
+            response_model=list[ReadPeople],
+            summary="Lista personas",
+            description="Obtiene una lista paginada de personas"
+        )
+        self.router.add_api_route(
+            "/{person_id}", 
+            self.get, 
+            methods=["GET"], 
+            response_model=ReadPeople,
+            summary="Obtiene una persona",
+            description="Obtiene una persona específica por su ID"
+        )
+        self.router.add_api_route(
+            "/", 
+            self.create, 
+            methods=["POST"], 
+            response_model=ReadPeople, 
+            status_code=201,
+            summary="Crea una persona",
+            description="Crea un nuevo registro de persona con person_id autogenerado (formato Q0000001)"
+        )
+        self.router.add_api_route(
+            "/{person_id}", 
+            self.update, 
+            methods=["PUT"], 
+            response_model=ReadPeople,
+            summary="Actualiza una persona",
+            description="Actualiza los datos de una persona existente"
+        )
+        self.router.add_api_route(
+            "/{person_id}", 
+            self.delete, 
+            methods=["DELETE"],
+            summary="Elimina una persona",
+            description="Elimina un registro de persona"
+        )
     
     def list(self, request: Request, skip: int = 0, limit: int = 100):
+        """Lista todas las personas con paginación."""
         db: Session = request.state.db_session
         self.logger.info(f"Listing people: skip={skip}, limit={limit}")
-        return db.query(People).offset(skip).limit(limit).all()
+        
+        if limit > 1000:
+            raise HTTPException(
+                status_code=400, 
+                detail="El límite máximo es 1000 registros"
+            )
+        
+        people = db.query(People).offset(skip).limit(limit).all()
+        return people
 
     def get(self, person_id: str, request: Request):
-        db_session: Session = request.state.db_session
+        """Obtiene una persona específica por su ID."""
+        db: Session = request.state.db_session
         self.logger.info(f"Getting person with id: {person_id}")
-        record = db_session.query(People).get(person_id)
-        if not record:
-            return JSONResponse(status_code=404, content={"error_description": "Not found"})
-        return record
+        
+        person = db.query(People).get(person_id)
+        if not person:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Persona {person_id} no encontrada"
+            )
+        
+        return person
 
     def create(self, data: CreatePeople, request: Request):
-        db_session: Session = request.state.db_session
-        new_record = People(**data.model_dump())
-        db_session.add(new_record)
-        db_session.flush()
-        return new_record
+        """
+        Crea un nuevo registro de persona con person_id autogenerado.
+        
+        Genera automáticamente:
+        - person_id: Formato Q0000001, Q0000002, etc.
+        
+        Validaciones:
+        - crash_record_id debe existir en crashes (si se proporciona)
+        - vehicle_id debe existir en vehicle (si se proporciona)
+        - crash_date no puede ser futura
+        - age debe estar entre 0 y 120
+        """
+        db: Session = request.state.db_session
+        self.logger.info(f"Creating new person")
+        
+        try:
+            # Validación: crash_record_id debe existir (si se proporciona)
+            if data.crash_record_id:
+                validate_foreign_key_exists(
+                    db=db,
+                    table_name="crashes",
+                    column_name="crash_record_id",
+                    value=data.crash_record_id
+                )
+            
+            # Validación: vehicle_id debe existir (si se proporciona)
+            if data.vehicle_id:
+                validate_foreign_key_exists(
+                    db=db,
+                    table_name="vehicle",
+                    column_name="vehicle_id",
+                    value=data.vehicle_id
+                )
+            
+            # Validación: Fecha no futura
+            if data.crash_date:
+                validate_date_not_future(data.crash_date, "crash_date")
+            
+            # Validación: Edad en rango válido
+            if data.age is not None:
+                validate_age(data.age)
+            
+            # Generar person_id automáticamente
+            person_id = generate_person_id(db)
+            
+            self.logger.info(f"Generated person_id: {person_id}")
+            
+            # Crear la persona
+            new_person = People(
+                person_id=person_id,
+                person_type=data.person_type,
+                crash_record_id=data.crash_record_id,
+                vehicle_id=data.vehicle_id,
+                crash_date=data.crash_date,
+                sex=data.sex,
+                age=data.age,
+                safety_equipment=data.safety_equipment,
+                airbag_deployed=data.airbag_deployed,
+                injury_classification=data.injury_classification
+            )
+            
+            db.add(new_person)
+            db.flush()
+            
+            self.logger.info(f"Created person with ID: {person_id}")
+            return new_person
+            
+        except HTTPException:
+            raise
+        except IntegrityError as e:
+            db.rollback()
+            self.logger.error(f"Integrity error creating person: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail="Error de integridad: crash_record_id o vehicle_id no válidos"
+            )
+        except ValueError as e:
+            # Puede ocurrir si se alcanza el límite de Q9999999
+            db.rollback()
+            self.logger.error(f"Error generating person_id: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=str(e)
+            )
+        except Exception as e:
+            db.rollback()
+            self.logger.error(f"Error creating person: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error interno del servidor: {str(e)}"
+            )
 
-    def update(self, person_id: str, data: CreatePeople, request: Request):
-        db_session: Session = request.state.db_session
-        record = db_session.query(People).get(person_id)
-        if not record:
-            raise HTTPException(status_code=404, detail="Not found")
-
-        for key, value in data.model_dump().items():
-            setattr(record, key, value)
-
-        db_session.flush()
-        return record
+    def update(self, person_id: str, data: UpdatePeople, request: Request):
+        """Actualiza un registro de persona existente."""
+        db: Session = request.state.db_session
+        self.logger.info(f"Updating person {person_id}")
+        
+        try:
+            person = db.query(People).get(person_id)
+            if not person:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Persona {person_id} no encontrada"
+                )
+            
+            update_data = data.model_dump(exclude_unset=True)
+            
+            # Validar crash_record_id si se actualiza
+            if 'crash_record_id' in update_data and update_data['crash_record_id']:
+                validate_foreign_key_exists(
+                    db=db,
+                    table_name="crashes",
+                    column_name="crash_record_id",
+                    value=update_data['crash_record_id']
+                )
+            
+            # Validar vehicle_id si se actualiza
+            if 'vehicle_id' in update_data and update_data['vehicle_id']:
+                validate_foreign_key_exists(
+                    db=db,
+                    table_name="vehicle",
+                    column_name="vehicle_id",
+                    value=update_data['vehicle_id']
+                )
+            
+            # Validar fecha si se actualiza
+            if 'crash_date' in update_data and update_data['crash_date']:
+                validate_date_not_future(update_data['crash_date'], "crash_date")
+            
+            # Validar edad si se actualiza
+            if 'age' in update_data and update_data['age'] is not None:
+                validate_age(update_data['age'])
+            
+            # Aplicar actualizaciones
+            for key, value in update_data.items():
+                setattr(person, key, value)
+            
+            db.flush()
+            self.logger.info(f"Updated person {person_id}")
+            return person
+            
+        except HTTPException:
+            raise
+        except IntegrityError as e:
+            db.rollback()
+            self.logger.error(f"Integrity error updating person: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail="Error de integridad en la base de datos"
+            )
+        except Exception as e:
+            db.rollback()
+            self.logger.error(f"Error updating person: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error interno del servidor: {str(e)}"
+            )
 
     def delete(self, person_id: str, request: Request):
-        db_session: Session = request.state.db_session
-        record = db_session.query(People).get(person_id)
-        if not record:
-            raise HTTPException(status_code=404, detail="Not found")
-
-        db_session.delete(record)
-        return {"message": "People record deleted"}
+        """Elimina un registro de persona."""
+        db: Session = request.state.db_session
+        self.logger.info(f"Deleting person {person_id}")
+        
+        try:
+            person = db.query(People).get(person_id)
+            if not person:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Persona {person_id} no encontrada"
+                )
+            
+            db.delete(person)
+            db.flush()
+            
+            self.logger.info(f"Deleted person {person_id}")
+            return {
+                "message": f"Persona {person_id} eliminada exitosamente",
+                "person_id": person_id
+            }
+            
+        except HTTPException:
+            raise
+        except IntegrityError as e:
+            db.rollback()
+            self.logger.error(f"Integrity error deleting person: {str(e)}")
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No se puede eliminar la persona porque tiene registros "
+                    "relacionados (por ejemplo, driver_info)"
+                )
+            )
+        except Exception as e:
+            db.rollback()
+            self.logger.error(f"Error deleting person: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error interno del servidor: {str(e)}"
+            )
