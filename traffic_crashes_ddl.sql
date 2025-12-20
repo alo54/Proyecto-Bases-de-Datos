@@ -134,3 +134,25 @@ CREATE TABLE driver_info
 
     FOREIGN KEY (person_id) REFERENCES people(person_id)
 );
+
+
+
+CREATE INDEX idx_people_crash_record_id 
+ON people(crash_record_id);
+
+CREATE INDEX idx_crashes_crash_record_id
+ON crashes (crash_record_id);
+
+
+CREATE INDEX CONCURRENTLY idx_crashes_crash_record_id
+ON crashes (crash_record_id);
+
+
+CREATE INDEX idx_crash_date_crash_record_id
+ON crash_date (crash_record_id);	
+
+CREATE INDEX idx_vehicle_crash_record_id
+ON vehicle (crash_record_id);
+
+CREATE INDEX idx_people_crash_record_id
+ON people (crash_record_id);
