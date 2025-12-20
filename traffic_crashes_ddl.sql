@@ -62,7 +62,6 @@ CREATE TABLE vehicle (
     vehicle_id BIGINT PRIMARY KEY,
     crash_unit_id INTEGER NOT NULL,
     crash_record_id VARCHAR(128) NOT NULL,
-    crash_date TIMESTAMP NOT NULL,
     unit_no INTEGER,
     unit_type VARCHAR(30),
     num_passengers INTEGER,
@@ -136,8 +135,6 @@ CREATE TABLE driver_info
 
     FOREIGN KEY (person_id) REFERENCES people(person_id)
 );
-
-
 
 
 
