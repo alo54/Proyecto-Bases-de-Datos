@@ -161,6 +161,7 @@ Los notebooks responsables del proceso de limpieza son los siguientes:
 	-  crash_injuries_build.ipynb
     -  vehicles_buildcsv.ipynb
 	-  LimpiezaCrashes.ipynb
+
 Cada notebook se encarga de limpiar y estandarizar una o más tablas específicas del modelo de datos.
 
 3. Orden de ejecución
