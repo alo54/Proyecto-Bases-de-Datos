@@ -14,7 +14,6 @@ from util.id_generators import generate_person_id
 from util.validators import (
     validate_foreign_key_exists,
     validate_age,
-    validate_date_not_future
 )
 
 
@@ -115,7 +114,6 @@ class PeopleRouter:
         Validaciones:
         - crash_record_id debe existir en crashes (si se proporciona)
         - vehicle_id debe existir en vehicle (si se proporciona)
-        - crash_date no puede ser futura
         - age debe estar entre 0 y 120
         """
         db: Session = request.state.db_session
@@ -140,10 +138,6 @@ class PeopleRouter:
                     value=data.vehicle_id
                 )
             
-            # Validación: Fecha no futura
-            if data.crash_date:
-                validate_date_not_future(data.crash_date, "crash_date")
-            
             # Validación: Edad en rango válido
             if data.age is not None:
                 validate_age(data.age)
@@ -159,7 +153,6 @@ class PeopleRouter:
                 person_type=data.person_type,
                 crash_record_id=data.crash_record_id,
                 vehicle_id=data.vehicle_id,
-                crash_date=data.crash_date,
                 sex=data.sex,
                 age=data.age,
                 safety_equipment=data.safety_equipment,
@@ -230,10 +223,6 @@ class PeopleRouter:
                     column_name="vehicle_id",
                     value=update_data['vehicle_id']
                 )
-            
-            # Validar fecha si se actualiza
-            if 'crash_date' in update_data and update_data['crash_date']:
-                validate_date_not_future(update_data['crash_date'], "crash_date")
             
             # Validar edad si se actualiza
             if 'age' in update_data and update_data['age'] is not None:

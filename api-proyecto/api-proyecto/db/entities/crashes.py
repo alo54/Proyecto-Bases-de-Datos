@@ -1,4 +1,4 @@
-from sqlalchemy import String, Numeric, TIMESTAMP
+from sqlalchemy import String, Numeric, TIMESTAMP, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 from db.entities.base import Base
@@ -21,7 +21,7 @@ class Crash(Base):
     incident_date: Mapped[datetime | None] = mapped_column(TIMESTAMP, nullable=True)
     latitude: Mapped[float | None] = mapped_column(Numeric(9, 6))
     longitude: Mapped[float | None] = mapped_column(Numeric(9, 6))
-    street_no: Mapped[str | None] = mapped_column(String(20))
+    street_no: Mapped[int | None] = mapped_column(Integer)
     street_name: Mapped[str | None] = mapped_column(String(255))
 
     # Relaciones con tablas dependientes

@@ -5,7 +5,6 @@ Modelos Pydantic para la tabla people.
 Define los schemas de validación para CREATE, READ y UPDATE.
 """
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
 from typing import Optional
 
 
@@ -19,7 +18,6 @@ class CreatePeople(BaseModel):
     Validaciones:
         - crash_record_id: Debe existir en crashes (si se proporciona)
         - vehicle_id: Debe existir en vehicle (si se proporciona)
-        - crash_date: No puede ser futura
         - age: Rango 0 a 120
         - Longitudes máximas de strings
     """
@@ -35,10 +33,6 @@ class CreatePeople(BaseModel):
     vehicle_id: Optional[int] = Field(
         None, 
         description="ID del vehículo asociado (opcional, debe existir si se proporciona)"
-    )
-    crash_date: Optional[datetime] = Field(
-        None, 
-        description="Fecha del crash (no puede ser futura)"
     )
     sex: Optional[str] = Field(
         None, 
@@ -67,22 +61,13 @@ class CreatePeople(BaseModel):
         description="Clasificación de lesión"
     )
 
-    @field_validator('crash_date')
-    @classmethod
-    def validate_date_not_future(cls, v):
-        """Valida que la fecha del crash no sea futura."""
-        if v and v > datetime.now():
-            raise ValueError('La fecha del crash no puede ser futura')
-        return v
-
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
                     "person_type": "DRIVER",
                     "crash_record_id": "000013b0123279411e0ec856dae95ab9f0851764350b7feaeb982c7707c6722066910e9391e60f45cec4b7a7a6643eeedb5de39e7245b03447a44c793680dc4b",
-                    "vehicle_id": 1234567,
-                    "crash_date": "2024-01-15T14:30:00",
+                    "vehicle_id": 10,
                     "sex": "M",
                     "age": 35,
                     "safety_equipment": "SEAT BELT",
@@ -105,7 +90,6 @@ class ReadPeople(BaseModel):
     person_type: Optional[str] = None
     crash_record_id: Optional[str] = None
     vehicle_id: Optional[int] = None
-    crash_date: Optional[datetime] = None
     sex: Optional[str] = None
     age: Optional[int] = None
     safety_equipment: Optional[str] = None
@@ -120,8 +104,7 @@ class ReadPeople(BaseModel):
                     "person_id": "Q0001234",
                     "person_type": "DRIVER",
                     "crash_record_id": "000013b0123279411e0ec856dae95ab9f0851764350b7feaeb982c7707c6722066910e9391e60f45cec4b7a7a6643eeedb5de39e7245b03447a44c793680dc4b",
-                    "vehicle_id": 1234567,
-                    "crash_date": "2024-01-15T14:30:00",
+                    "vehicle_id": 10,
                     "sex": "M",
                     "age": 35,
                     "safety_equipment": "SEAT BELT",
@@ -151,11 +134,6 @@ class UpdatePeople(BaseModel):
         None, 
         description="Nuevo vehicle_id (debe existir si se proporciona)"
     )
-    crash_date: Optional[datetime] = None
-    sex: Optional[str] = Field(
-        None, 
-        max_length=10
-    )
     age: Optional[int] = Field(
         None, 
         ge=0, 
@@ -173,12 +151,4 @@ class UpdatePeople(BaseModel):
         None, 
         max_length=100
     )
-
-    @field_validator('crash_date')
-    @classmethod
-    def validate_date_not_future(cls, v):
-        """Valida que la fecha del crash no sea futura."""
-        if v and v > datetime.now():
-            raise ValueError('La fecha del crash no puede ser futura')
-        return v
     
