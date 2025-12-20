@@ -204,7 +204,7 @@ La separación de información permitió eliminar duplicidad de datos, reducir a
 
 Como resultado, se obtuvo un esquema relacional robusto, flexible y alineado con las mejores prácticas de diseño de base de datos relacionales para análisis de eventos complejos como accidentes de tránsito. 
 
-<img width="1280" height="498" alt="image" src="https://github.com/user-attachments/assets/444a6459-e7e1-4ab1-b94a-f8076b2957bf" />
+![Diagrama Entidad-Relación del modelo de datos](figures/erd.JPG)
 
 El proceso comenzó con la creación de la tabla principal **'crashes'**, la cual concentra la información base de cada accidente, identificada de manera única por el atributo **'crash_record_id'**. Esta tabla almacena información temporal y espacial del evento, como la fecha del accidente, coordenadas geográficas y la vialidad asociada. 
 
