@@ -12,7 +12,7 @@ def generate_crash_record_id(
     incident_date: datetime,
     latitude: float,
     longitude: float,
-    street_no: str,
+    street_no: int,
     street_name: str
 ) -> str:
     """

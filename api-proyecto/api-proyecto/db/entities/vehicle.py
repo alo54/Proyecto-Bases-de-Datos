@@ -1,6 +1,5 @@
 from sqlalchemy import BigInteger, Integer, String, TIMESTAMP, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from datetime import datetime
 from db.entities.base import Base
 
 class Vehicle(Base):
@@ -12,7 +11,6 @@ class Vehicle(Base):
         String(128),
         ForeignKey("crashes.crash_record_id", onupdate="CASCADE", ondelete="CASCADE")
     )
-    crash_date: Mapped[datetime] = mapped_column(TIMESTAMP, nullable=False) #Posiblemente cambio a timestamp?
 
     unit_no: Mapped[int | None] = mapped_column(Integer)
     unit_type: Mapped[str | None] = mapped_column(String(30))

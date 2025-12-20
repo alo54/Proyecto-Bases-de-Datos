@@ -129,11 +129,11 @@ El proceso de limpieza de datos se llevó a cabo de manera incremental y sistem�
 
 Uno de los principales problemas detectados fue a presencia de valores nulos no explícitos, es decir, cadenas vacías (`''`) o valores de texto que representaban ausencia de información. Para solucionarlo, se aplicaron funciones como `NULLIF`, `BTRIM`  y `COALESCE`, tranformando estos registros en valores `NULL` reales dentro de PostgresSQL.
 
-En la tabla **`people`** se normalizaron atributos como **`people_type`**, **`sex`**, **`safety_equipment`**,**`airbag_deployed`** e **`injuty_classification`**, eliminando cadenas vacías y estandarizando los valores. De manera similar, en la tabla **`vehicle`** se limpiaron campos textuales como **`unit_type`**, **`make`**, **`model`** y **`vehice_type`**.
+En la tabla **`people`** se normalizaron atributos como **`people_type`**, **`sex`**, **`safety_equipment`**,**`airbag_deployed`** e **`injury_classification`**, eliminando cadenas vacías y estandarizando los valores. De manera similar, en la tabla **`vehicle`** se limpiaron campos textuales como **`unit_type`**, **`make`**, **`model`** y **`vehicle_type`**.
 
 Para las tablas especializadas de vehiculos (**`vehicle_models`**, **`vehicle_maneuvers`**, **`vehicle_violations`**) se aplicaron transformaciones adicionales para eliminar espacios innecesarios y corregir valores inválidos, garantizando que los atributos categóricos fueran consistentes y utilizables en análisis posteriores. 
 
-En el caso de **`drive_info`**, se realizó una limpieza más exhaustiva debido a la variedad de valores en atributos como **`driver_action`**, **`driver_vision`**, **`physical_condition`** y **`druvers_license_class`**. Se eliminaron caracteres no válidos, se estandarizó el uso de mayúsculas y se validaron las expresiones mediante expresiones regulares para asegurar la coherencia de los registros. 
+En el caso de **`driver_info`**, se realizó una limpieza más exhaustiva debido a la variedad de valores en atributos como **`driver_action`**, **`driver_vision`**, **`physical_condition`** y **`drivers_license_class`**. Se eliminaron caracteres no válidos, se estandarizó el uso de mayúsculas y se validaron las expresiones mediante expresiones regulares para asegurar la coherencia de los registros. 
 
 Por último, en **`crash_injuries`** se detectó la presencia de valores nulos en campos númericos críticos. Para evitar incosistencias en los cálculos, los valores fueron sustituidos por ceros utilizando **`COALESCE`**, bajo el supuesto de que la ausencia de registros implicaba la inexistencia de lesiones de ese tipo. 
 
@@ -572,5 +572,8 @@ El análisis de los datos de accidentes de tránsito en Chicago muestra que la o
 Los resultados permiten identificar zonas críticas específicas, como avenidas con alta concentración de choques (por ejemplo, Western Ave y Pulaski Rd), así como patrones temporales claros, especialmente en horarios de alta circulación durante la tarde y en ciertos días y meses del año. Esto abre la puerta a intervenciones focalizadas en lugar de medidas generales para toda la ciudad.
 
 A partir de estos hallazgos, se proponen las siguientes recomendaciones para disminuir la cantidad y severidad de los choques en Chicago:
-1. Intervenciones  en hotspots: Priorizar mejoras en infraestructura, señalización y control vial en las zonas con mayor concentración de accidentes, en lugar de aplicar políticas homogéneas en toda la ciudad.
-2. Gestión del tráfico en horas pico: Implementar estrategias de control de flujo, sincronización semafórica y regulación del tránsito durante la franja de mayor riesgo (especialmente entre las 12:00 y 17:00 horas).
+1. Intervenciones focalizadas en hotspots
+Priorizar mejoras en infraestructura, señalización y control vial en las zonas con mayor concentración de accidentes, en lugar de aplicar políticas homogéneas en toda la ciudad.
+2. Gestión del tráfico en horas pico
+Implementar estrategias de control de flujo, sincronización semafórica y regulación del tránsito durante la franja de mayor riesgo (especialmente entre las 12:00 y 17:00 horas).
+

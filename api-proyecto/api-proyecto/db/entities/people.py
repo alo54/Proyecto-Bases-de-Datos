@@ -17,7 +17,6 @@ class People(Base):
         person_type: Tipo de persona (conductor, pasajero, peatón)
         crash_record_id: FK a crashes (opcional)
         vehicle_id: FK a vehicle (opcional)
-        crash_date: Fecha del crash
         sex: Sexo de la persona
         age: Edad de la persona
         safety_equipment: Equipo de seguridad usado
@@ -37,7 +36,6 @@ class People(Base):
         BigInteger,
         ForeignKey("vehicle.vehicle_id")
     )
-    crash_date: Mapped[datetime | None] = mapped_column(TIMESTAMP)
 
     sex: Mapped[str | None] = mapped_column(String(10))
     age: Mapped[int | None] = mapped_column(Integer)

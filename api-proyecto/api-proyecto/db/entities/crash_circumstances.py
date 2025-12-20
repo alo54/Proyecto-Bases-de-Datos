@@ -3,6 +3,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from db.entities.base import Base
 
 class CrashCircumstances(Base):
+    """
+    Tabla de circunstancias del crash.
+    Almacena condiciones del entorno, tráfico y características del lugar.
+    """
     __tablename__ = "crash_circumstances"
 
     crash_record_id: Mapped[str] = mapped_column(

@@ -14,7 +14,8 @@ from util.id_generators import generate_crash_record_id, truncate_coordinates
 from util.validators import (
     validate_coordinates, 
     validate_date_not_future, 
-    validate_string_length
+    validate_string_length,
+    validate_non_negative
 )
 
 
@@ -154,11 +155,13 @@ class CrashesRouter:
             validate_date_not_future(data.incident_date, "incident_date")
             
             # Validación 3: Longitud de strings
-            if data.street_no:
-                validate_string_length(data.street_no, 20, "street_no")
             if data.street_name:
                 validate_string_length(data.street_name, 255, "street_name")
             
+            # Validación 4: street_no no negativo
+            if data.street_no is not None:
+                validate_non_negative(data.street_no, "street_no")
+
             # Truncar coordenadas a 6 decimales para consistencia
             lat_truncated, lon_truncated = truncate_coordinates(
                 data.latitude, 
@@ -170,7 +173,7 @@ class CrashesRouter:
                 incident_date=data.incident_date,
                 latitude=lat_truncated,
                 longitude=lon_truncated,
-                street_no=data.street_no or "",
+                street_no=data.street_no if data.street_no is not None else 0,
                 street_name=data.street_name or ""
             )
             
@@ -261,12 +264,8 @@ class CrashesRouter:
                     "incident_date"
                 )
             
-            if 'street_no' in update_data and update_data['street_no']:
-                validate_string_length(
-                    update_data['street_no'], 
-                    20, 
-                    "street_no"
-                )
+            if 'street_no' in update_data and update_data['street_no'] is not None:
+                validate_non_negative(update_data['street_no'], "street_no")
             
             if 'street_name' in update_data and update_data['street_name']:
                 validate_string_length(
@@ -305,7 +304,6 @@ class CrashesRouter:
         Elimina un crash.
         
         Nota: Esto eliminará en cascada todos los registros relacionados:
-        - crash_date
         - crash_circumstances
         - crash_injuries
         - crash_classification

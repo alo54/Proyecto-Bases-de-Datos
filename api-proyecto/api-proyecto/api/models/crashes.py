@@ -18,7 +18,7 @@ class CreateCrash(BaseModel):
         - incident_date: No puede ser futura
         - latitude: Rango -90 a 90
         - longitude: Rango -180 a 180
-        - street_no: Máximo 20 caracteres
+        - street_no: No negativo
         - street_name: Máximo 255 caracteres
     """
     incident_date: datetime = Field(
@@ -37,9 +37,10 @@ class CreateCrash(BaseModel):
         le=180, 
         description="Longitud del crash (será truncada a 6 decimales)"
     )
-    street_no: Optional[str] = Field(
+    street_no: Optional[int] = Field(
         None, 
-        max_length=20, 
+        ge=0, 
+        le=9999999,
         description="Número de calle"
     )
     street_name: Optional[str] = Field(
@@ -95,7 +96,7 @@ class ReadCrash(BaseModel):
         None, 
         description="Longitud del crash"
     )
-    street_no: Optional[str] = Field(
+    street_no: Optional[int] = Field(
         None, 
         description="Número de calle"
     )
@@ -144,9 +145,10 @@ class UpdateCrash(BaseModel):
         le=180, 
         description="Nueva longitud"
     )
-    street_no: Optional[str] = Field(
+    street_no: Optional[int] = Field(
         None, 
-        max_length=20, 
+        ge=0, 
+        le=9999999,
         description="Nuevo número de calle"
     )
     street_name: Optional[str] = Field(
