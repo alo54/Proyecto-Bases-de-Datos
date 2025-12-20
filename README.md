@@ -803,4 +803,250 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 ```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
 ```
+# Arquitectura de la API Traffic Crashes
 
+## Tabla de Contenidos
+
+1. [Generación de Identificadores Únicos](#generación-de-identificadores-únicos)
+2. [Sistema de Validación de Datos](#sistema-de-validación-de-datos)
+3. [Manejo de Errores y Excepciones](#manejo-de-errores-y-excepciones)
+4. [Estructura de los Routers](#estructura-de-los-routers)
+5. [Middleware y Gestión de Sesiones](#middleware-y-gestión-de-sesiones)
+6. [Logging y Monitoreo](#logging-y-monitoreo)
+7. [Mejores Prácticas Implementadas](#mejores-prácticas-implementadas)
+
+---
+
+## Generación de Identificadores Únicos
+
+La API implementa tres estrategias distintas de generación de IDs según la entidad, garantizando unicidad y trazabilidad de los registros.
+
+### 1. Crashes: Hash SHA-512
+
+**Ubicación:** `util/id_generators.py :: generate_crash_record_id()`
+```python
+def generate_crash_record_id(
+    incident_date: datetime,
+    latitude: float,
+    longitude: float,
+    street_no: int,
+    street_name: str
+) -> str:
+    """
+    Genera un crash_record_id único de 128 caracteres usando SHA-512.
+    
+    Componentes del hash:
+    - incident_date (formato ISO: YYYY-MM-DD HH:MM:SS)
+    - latitude (truncada a 6 decimales)
+    - longitude (truncada a 6 decimales)
+    - street_no
+    - street_name
+    """
+```
+
+**Ventajas:**
+- **Determinístico:** El mismo conjunto de datos siempre produce el mismo ID
+- **Detección de duplicados:** Evita registros redundantes automáticamente
+- **Integridad:** Los 128 caracteres hexadecimales proporcionan una colisión prácticamente imposible
+- **Trazabilidad:** Permite identificar accidentes idénticos en diferentes cargas de datos
+
+**Ejemplo:**
+```python
+# Input:
+incident_date = "2024-01-15 14:30:00"
+latitude = 41.878100
+longitude = -87.629800
+street_no = 1234
+street_name = "N MICHIGAN AVE"
+
+# Output:
+crash_record_id = "000013b0123279411e0ec856dae95ab9f0851764350b7feaeb982c7707c6722066910e9391e60f45cec4b7a7a6643eeedb5de39e7245b03447a44c793680dc4b"
+```
+
+---
+
+### 2. People: Formato Alfanumérico Secuencial
+
+**Ubicación:** `util/id_generators.py :: generate_person_id()`
+```python
+def generate_person_id(db: Session) -> str:
+    """
+    Genera person_id en formato: Q + 7 dígitos numéricos con padding de ceros.
+    
+    Formato: Q0000001, Q0000002, ..., Q9999999
+    Capacidad máxima: 9,999,999 registros únicos
+    """
+```
+
+**Implementación:**
+```sql
+-- Query interna para obtener el siguiente número
+SELECT COALESCE(MAX(CAST(SUBSTRING(person_id FROM 2) AS INTEGER)), 0) + 1 
+FROM people 
+WHERE person_id ~ '^Q[0-9]{7}$'
+```
+
+**Características:**
+- **Prefijo identificador:** La letra "Q" distingue visualmente estos IDs de otros tipos
+- **Ordenamiento natural:** Los ceros a la izquierda permiten ordenamiento alfanumérico correcto
+- **Validación incorporada:** La expresión regular `^Q[0-9]{7}$` filtra IDs malformados
+- **Límite controlado:** Lanza `ValueError` al alcanzar Q9999999
+
+---
+
+### 3. Vehicle: Autoincremental con Búsqueda del Máximo
+
+**Ubicación:** `util/id_generators.py :: generate_vehicle_id()` y `generate_crash_unit_id()`
+```python
+def generate_vehicle_id(db: Session) -> int:
+    """
+    Obtiene el siguiente vehicle_id disponible buscando el máximo actual + 1.
+    """
+    result = db.execute(text("SELECT COALESCE(MAX(vehicle_id), 0) + 1 FROM vehicle"))
+    next_id = result.scalar()
+    return next_id
+```
+
+**Ventajas sobre SERIAL de PostgreSQL:**
+- **Control explícito:** La aplicación gestiona la secuencia, no la base de datos
+- **Portabilidad:** Funciona consistentemente en múltiples motores SQL
+- **Debugging simplificado:** Los IDs pueden rastrearse fácilmente en logs
+- **Integración con lógica de negocio:** Permite validaciones previas a la asignación
+
+---
+
+## Sistema de Validación de Datos
+
+**Ubicación:** `util/validators.py`
+
+El módulo de validadores implementa una capa de seguridad que previene datos inconsistentes antes de que lleguen a la base de datos.
+
+### Validadores Principales
+
+#### `validate_coordinates(latitude, longitude)`
+```python
+def validate_coordinates(latitude: float, longitude: float) -> None:
+    """
+    Valida que las coordenadas estén dentro de rangos geográficos válidos.
+    
+    Reglas:
+    - Latitud: -90° a 90° (Polo Sur a Polo Norte)
+    - Longitud: -180° a 180° (Antimeridiano completo)
+    
+    Raises:
+        HTTPException 400 con mensaje específico del rango violado
+    """
+```
+
+#### `validate_date_not_future(date, field_name)`
+Verifica que una fecha no sea posterior al momento actual. Previene registros de accidentes "futuros" por error de entrada.
+
+#### `validate_age(age)`
+```python
+def validate_age(age: int) -> None:
+    """
+    Valida que la edad esté en un rango realista (0-120 años).
+    """
+```
+
+#### `validate_vehicle_year(year)`
+```python
+def validate_vehicle_year(year: int) -> None:
+    """
+    Valida que el año del vehículo esté entre 1900 y (año_actual + 1).
+    """
+```
+
+#### `validate_foreign_key_exists(db, table_name, column_name, value)`
+```python
+def validate_foreign_key_exists(
+    db: Session,
+    table_name: str,
+    column_name: str,
+    value: Any
+) -> None:
+    """
+    Verifica que una llave foránea exista antes de crear el registro.
+    
+    Ventajas sobre restricciones SQL nativas:
+    1. Mensajes de error más descriptivos para el cliente
+    2. Validación temprana antes de transacciones complejas
+    3. Logging específico de violaciones
+    """
+```
+
+#### `normalize_boolean(value)`
+Convierte representaciones variadas de booleanos a True/False/None:
+- Booleanos: `True`, `False`
+- Numéricos: `0` (False), `1` (True)
+- Strings: `"true"`, `"false"`, `"1"`, `"0"`, `"yes"`, `"no"` (case-insensitive)
+
+---
+
+## Manejo de Errores y Excepciones
+
+### Arquitectura de Tres Capas
+```
+┌─────────────────────────────────┐
+│   1. Validación Pydantic        │  422 → 400
+│   (Transformada en main.py)     │
+└────────────┬────────────────────┘
+             │
+┌────────────▼────────────────────┐
+│   2. Validadores Customizados   │  400
+│   (util/validators.py)          │
+└────────────┬────────────────────┘
+             │
+┌────────────▼────────────────────┐
+│   3. Excepciones de Base de     │  400/404/409/500
+│      Datos (Routers)            │
+└─────────────────────────────────┘
+```
+
+### Handler Global de Validación
+
+**Ubicación:** `main.py :: validation_exception_handler()`
+```python
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Transforma errores de validación de Pydantic (422) en respuestas 400 Bad Request.
+    """
+```
+
+**Transformación de errores:**
+
+**Antes (422):**
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "latitude"],
+      "msg": "ensure this value is greater than or equal to -90",
+      "type": "value_error.number.not_ge"
+    }
+  ]
+}
+```
+
+**Después (400):**
+```json
+{
+  "detail": "Error de validación en los datos proporcionados",
+  "errors": [
+    {
+      "field": "latitude",
+      "message": "Debe ser mayor o igual a -90",
+      "type": "greater_than_equal"
+    }
+  ]
+}
+```
+
+### Códigos de Estado HTTP Utilizados
+
+| Código | Uso | Ejemplo |
+|--------|-----|---------|
+| **200 OK** | Operación exitosa | GET, PUT exitoso |
+| **201 Created** | Recurso creado | POST exitoso |
+| **400 Bad Request** | Datos inválidos | Validación fallida
