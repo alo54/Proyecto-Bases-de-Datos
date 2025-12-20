@@ -37,8 +37,8 @@ class CrashCircumstancesRouter:
         db: Session = request.state.db_session
         self.logger.info(f"Listing crash_circumstances: skip={skip}, limit={limit}")
         
-        if limit > 1000:
-            raise HTTPException(status_code=400, detail="El límite máximo es 1000 registros")
+        if limit > 1000 or limit < 0:
+            raise HTTPException(status_code=400, detail="El límite máximo es 1000 registros y el minimo es 0")
         
         return db.query(CrashCircumstances).offset(skip).limit(limit).all()
 
