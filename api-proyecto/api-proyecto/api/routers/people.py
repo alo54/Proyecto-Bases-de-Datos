@@ -81,10 +81,10 @@ class PeopleRouter:
         db: Session = request.state.db_session
         self.logger.info(f"Listing people: skip={skip}, limit={limit}")
         
-        if limit > 1000:
+        if limit > 1000 or limit < 0:
             raise HTTPException(
                 status_code=400, 
-                detail="El límite máximo es 1000 registros"
+                detail="El límite máximo es 1000 registros y el minimo es 0"
             )
         
         people = db.query(People).offset(skip).limit(limit).all()
