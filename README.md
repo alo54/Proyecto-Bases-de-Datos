@@ -566,6 +566,103 @@ LIMIT 30;
 ```
 En el hotspot principal se ven clima despejado y luz del día. Por lo que no podemos concluir que estos factores no tienen gran impacto.
 
+
+# Propuesta de Análisis de Machine Learning: Accidentes de Tráfico en Chicago
+
+Basado en el esquema relacional (DDL) proporcionado y considerando la segmentación previa por zonas de alta densidad ("Hotspots"), se proponen los siguientes análisis de Machine Learning.
+
+El objetivo general es pasar de un análisis **descriptivo** (qué pasó y dónde) a uno **predictivo** (qué pasará) y **prescriptivo** (cómo evitarlo).
+
+---
+
+## 1. Predicción de Severidad del Accidente (Clasificación Supervisada)
+
+**Finalidad:**
+Determinar la probabilidad de que un choque resulte en lesiones fatales o incapacitantes dadas ciertas condiciones. Esto permite a los servicios de emergencia (911) priorizar recursos y a los planificadores urbanos identificar qué combinaciones de factores (ej. lluvia + noche + exceso de velocidad) son mortales.
+
+### Variables a Utilizar (Features):
+* **Temporales (`crash_date`):** `crash_day_of_week`, `crash_month`, y la hora derivada de `incident_date`.
+* **Ambientales (`crash_circumstances`):** `weather_condition`, `lighting_condition`, `roadway_surface_cond`.
+* **Infraestructura (`crash_circumstances`, `crashes`):** `posted_speed_limit`, `traffic_control_device`, `road_defect`, `alignment`.
+* **Vehicular (`vehicle`, `vehicle_models`):** `vehicle_type` (ej. camión vs sedán), `vehicle_defect`.
+* **Humano (`driver_info`, `people`):** `age`, `sex`, `physical_condition`, `bac_result` (nivel de alcohol).
+* **Target (Variable Objetivo):** Una variable binaria creada a partir de `crash_injuries`: `0` (Solo daños materiales) vs `1` (Con heridos/Fatales).
+
+### Modelos Recomendados:
+1.  **Random Forest Classifier / XGBoost:** Ideales para manejar datos tabulares con mezcla de variables numéricas y categóricas. Permiten extraer la "importancia de las variables" para explicar qué factor pesa más en la gravedad.
+2.  **Regresión Logística:** Útil si se busca un modelo altamente interpretable para presentar coeficientes de riesgo (Odds Ratios) a autoridades gubernamentales.
+
+---
+
+## 2. Pronóstico de Demanda de Accidentes en Hotspots (Time Series Forecasting)
+
+**Finalidad:**
+Predecir la cantidad de accidentes que ocurrirán en los "Hotspots" identificados durante la próxima semana o mes. Esto sirve para la asignación dinámica de patrullas o ambulancias en horarios y zonas específicas.
+
+### Variables a Utilizar (Features):
+* **Serie de Tiempo:** Conteo histórico de `crash_record_id` agrupado por hora/día en cada Hotspot.
+* **Exógenas (Externas):**
+    * `weather_condition` (Pronóstico del clima: si llueve mañana, ¿sube el riesgo?).
+    * `crash_day_of_week` (Efecto fin de semana).
+    * Festivos o eventos especiales (derivados de `incident_date`).
+
+### Modelos Recomendados:
+1.  **SARIMA (Seasonal ARIMA):** Para capturar la estacionalidad (ej. picos en horas punta o viernes por la noche).
+2.  **Prophet (Facebook):** Muy efectivo para manejar días festivos y tendencias estacionales fuertes sin requerir un preprocesamiento exhaustivo.
+3.  **LSTM (Long Short-Term Memory - Redes Neuronales):** Si se tiene un volumen de datos histórico muy grande y se quieren capturar patrones complejos no lineales.
+
+---
+
+## 3. Clasificación de Causa Contribuyente (Multiclass Classification)
+
+**Finalidad:**
+Dado un accidente con ciertas características físicas (sin saber aún la causa oficial), predecir cuál fue el factor detonante (`primary_contributory_cause`). Esto ayuda a validar si la infraestructura vial está induciendo errores (ej. si el modelo predice "Falla en la vía" basándose en `road_defect` y `lighting_condition`, pero el reporte policial dice "Error del conductor", hay una discrepancia a investigar).
+
+### Variables a Utilizar (Features):
+* **Maniobras (`vehicle_maneuvers`):** `maneuver` (ej. giro a la izquierda, cambio de carril).
+* **Violaciones (`vehicle_violations`):** `exceed_speed_limit_i`, `cmrc_veh_i`.
+* **Entorno:** `trafficway_type`, `intersection_related_i`, `traffic_control_device`.
+* **Target:** `crash_classification.primary_contributory_cause` (Esta variable tiene muchas clases, se recomienda agruparlas en 5-6 categorías principales: Distracción, Clima, Infraestructura, Alcohol/Drogas, Exceso de Velocidad).
+
+### Modelos Recomendados:
+1.  **Gradient Boosting (LightGBM o CatBoost):** Manejan muy bien variables categóricas con alta cardinalidad (muchas opciones de texto).
+2.  **Decision Trees:** Para generar reglas simples (ej. "Si llueve y es de noche -> Causa probable: Clima").
+
+---
+
+## 4. Clustering de Perfiles de Riesgo (No Supervisado)
+
+**Finalidad:**
+Encontrar patrones ocultos dentro de los Hotspots. No todos los accidentes en un Hotspot son iguales. Este análisis agrupa los accidentes en "Tipos" (Clusters).
+* *Ejemplo:* Cluster A (Choques leves en hora pico por tráfico), Cluster B (Choques graves nocturnos por alcohol).
+
+### Variables a Utilizar (Features):
+* `posted_speed_limit`
+* `age` del conductor.
+* `bac_result` (Alcohol).
+* `weather_condition`.
+* `vehicle_type`.
+* `first_crash_type` (Ángulo, Trasero, Peatón).
+
+### Modelos Recomendados:
+1.  **K-Means / K-Prototypes:** K-Prototypes es esencial aquí porque permite mezclar variables numéricas (edad, velocidad) con categóricas (clima, tipo de vía).
+2.  **DBSCAN:** Para encontrar outliers (accidentes anómalos que no encajan en ningún patrón común, posibles fraudes o eventos extraordinarios).
+
+---
+
+## Resumen Técnico para Implementación
+
+| Análisis | Tipo de Modelo | Target Principal | Tablas Clave del DDL |
+| :--- | :--- | :--- | :--- |
+| **Severidad** | Clasificación Binaria | `injuries_fatal` / `incapacitating` | `crashes`, `people`, `crash_injuries` |
+| **Pronóstico** | Regresión / Series de Tiempo | `count(crash_record_id)` | `crashes` (incident_date) |
+| **Causas** | Clasificación Multiclase | `primary_contributory_cause` | `crash_classification`, `vehicle_maneuvers` |
+| **Perfiles** | Clustering (No supervisado) | N/A | `driver_info`, `crash_circumstances` |
+
+### Notas sobre el Preprocesamiento
+Dado el DDL, será necesario realizar **One-Hot Encoding** o **Label Encoding** para las numerosas variables categóricas (VARCHAR) como `weather_condition`, `lighting_condition` y `trafficway_type` antes de alimentar cualquier modelo numérico.
+
+
 ## Conclusión
 El análisis de los datos de accidentes de tránsito en Chicago muestra que la ocurrencia de choques no está dominada únicamente por condiciones adversas como el mal clima o los defectos en la vía, sino principalmente por factores asociados al volumen de tráfico, la ubicación y el comportamiento de los conductores. La mayoría de los accidentes se concentran en condiciones aparentemente favorables —clima despejado, buena iluminación y vialidades sin defectos— lo que sugiere que la exposición al tráfico y la actividad urbana intensa juegan un papel central en el riesgo vial.
 
@@ -576,4 +673,134 @@ A partir de estos hallazgos, se proponen las siguientes recomendaciones para dis
 Priorizar mejoras en infraestructura, señalización y control vial en las zonas con mayor concentración de accidentes, en lugar de aplicar políticas homogéneas en toda la ciudad.
 2. Gestión del tráfico en horas pico
 Implementar estrategias de control de flujo, sincronización semafórica y regulación del tránsito durante la franja de mayor riesgo (especialmente entre las 12:00 y 17:00 horas).
+
+
+## Configuración y Ejecución de la API
+
+A continuación se detallan los pasos necesarios para clonar el repositorio, configurar la conexión a la base de datos y ejecutar la API localmente.
+
+### 1. Clonar el repositorio
+
+Abra su terminal y ejecute el siguiente comando para descargar los archivos del proyecto en la dirección deseada:
+
+```bash
+git clone [https://github.com/alo54/Proyecto-Bases-de-Datos.git](https://github.com/alo54/Proyecto-Bases-de-Datos.git)
+```
+---
+
+### 2. Configuración de la Base de Datos
+Para que la API pueda conectarse correctamente a la base de datos PostgreSQL alojada en el servidor (accesible vía VPN), es necesario actualizar la cadena de conexión.
+
+Localice el archivo de configuración de sesión en la siguiente ruta: api-proyecto/api-proyecto/db/session.py
+
+Abra el archivo y modifique la variable DATABASE_URL con las credenciales del usuario de prueba:
+
+# Archivo: api-proyecto/api-proyecto/db/session.py
+
+```python
+DATABASE_URL = (
+    "postgresql+psycopg2://"
+    "marco:4igxB7IVPU1WsWIGwZOrSA4gu5wqjo4aAKYkktgtM9i1"
+    "@10.10.10.28:5432/traffic_crashes"
+)
+```
+Nota: Asegúrese de estar conectado a la VPN privada para tener acceso a la IP 10.10.10.28.
+
+---
+
+### 3. Instalación y Ejecución
+Este proyecto utiliza uv (Astral) para la gestión de dependencias y entornos virtuales. Siga las instrucciones correspondientes a su sistema operativo.
+Windows (PowerShell)
+```bash
+# 1. Navegar al directorio de la API
+cd .\Proyecto-Bases-de-Datos\api-proyecto\api-proyecto
+
+# 2. (Opcional) Verificar versión de Python
+python --version
+
+# 3. Instalar uv (Gestor de paquetes)
+irm [https://astral.sh/uv/install.ps1](https://astral.sh/uv/install.ps1) | iex
+
+# 4. Verificar instalación de uv
+uv --version
+
+# 5. Crear entorno virtual (basado en .python-version)
+uv venv
+
+# 6. Activar el entorno virtual
+.\.venv\Scripts\Activate.ps1
+
+# 7. Instalar dependencias (lee pyproject.toml y uv.lock)
+uv sync
+
+# 8. Ejecutar la API
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+```bash
+macOS / Linux (Bash/Zsh)
+# 1. Navegar al directorio de la API
+cd ./Proyecto-Bases-de-Datos/api-proyecto/api-proyecto
+
+# 2. (Opcional) Verificar versión de Python
+python3 --version
+
+# 3. Instalar uv (Gestor de paquetes)
+curl -LsSf [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) | sh
+
+# 4. Verificar instalación de uv
+uv --version
+
+# 5. Crear entorno virtual (basado en .python-version)
+uv venv
+
+# 6. Activar el entorno virtual
+source .venv/bin/activate
+
+# 7. Instalar dependencias (lee pyproject.toml y uv.lock)
+uv sync
+
+# 8. Ejecutar la API
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Acceso a la API
+Una vez que el servidor esté en ejecución, podrás acceder a la API y a su documentación interactiva en las siguientes URLs:
+
+API Root: http://localhost:8000
+
+Documentación (Swagger UI): http://localhost:8000/docs
+
+Documentación (ReDoc): http://localhost:8000/redoc
+
+
+
+## 🔧 Solución de Problemas: Firewall y Puertos
+Si la API se está ejecutando pero no logras acceder a ella desde el navegador o herramientas externas, es probable que el Firewall esté bloqueando la conexión.
+
+## Windows
+Si experimentas bloqueos, asegúrate de desactivar los perfiles de Windows Defender (Dominio, Privado y Público) momentáneamente para probar la conexión.
+
+Alternativamente, puedes ejecutar los siguientes comandos en PowerShell como Administrador para gestionar el puerto específicamente:
+
+### Abrir puerto 8000 en el firewall (Permitir tráfico entrante)
+```bash
+New-NetFirewallRule -DisplayName "Permitir Puerto 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+```
+
+### Cerrar puerto 8000 (Revertir cambios)
+```bash
+Remove-NetFirewallRule -DisplayName "Permitir Puerto 8000"
+```
+##macOS
+En macOS, el sistema suele solicitar permiso para "Aceptar conexiones entrantes" la primera vez que se ejecuta la aplicación. Si esto falla, puedes desactivar el Firewall de aplicación temporalmente desde la terminal:
+
+### Desactivar el Firewall de aplicación (Permitir todas las conexiones)
+```bash
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+```
+### Reactivar el Firewall (Recomendado al finalizar)
+```bash
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+```
 
