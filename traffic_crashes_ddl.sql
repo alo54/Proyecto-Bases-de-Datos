@@ -6,7 +6,7 @@ crash_record_id VARCHAR(128) PRIMARY KEY,
 incident_date TIMESTAMP,
 latitude NUMERIC(9,6), 
 longitude NUMERIC(9,6),
-street_no VARCHAR(20),
+street_no INTEGER,
 street_name VARCHAR(255)
 );
 
@@ -111,7 +111,6 @@ CREATE TABLE people
     person_type            VARCHAR(50),
     crash_record_id        VARCHAR(128),
     vehicle_id             BIGINT,
-    crash_date             TIMESTAMP,
     sex                    VARCHAR(10),
     age                    INT,
     safety_equipment       VARCHAR(200),
@@ -135,6 +134,3 @@ CREATE TABLE driver_info
 
     FOREIGN KEY (person_id) REFERENCES people(person_id)
 );
-
-
-
