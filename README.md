@@ -139,6 +139,47 @@ Por último, en **`crash_injuries`** se detectó la presencia de valores nulos e
 
 Al concluir este proceso, se obtuvo un conjunto de tablas con datos limpios, correctamente tipados y coherente entre sí, listos para su análisis y para garantizar integridad durante la normalización. 
 
+### Replicación
+Esta sección describe cómo reproducir el proceso de limpieza de la base de datos a partir de los archivos originales, utilizando Python y Jupyter Notebooks.
+
+1. Requisitos
+Para ejecutar los scripts de limpieza es necesario contar con:
+* Python 3.9 o superior
+* Jupyter Notebook
+* Librerías de Python:
+    * pandas
+    * numpy
+ 
+2. Estructura relevante del proyecto
+Los notebooks responsables del proceso de limpieza son los siguientes:
+	- trim_crashes.ipynb
+	- trim_vehicles.ipynb
+	- Pedestrian_info.ipynb
+	- Crash_classification.ipnynb
+	- limpieza_people_people.ipynb
+	-  limpieza_people_driver_info.ipynb
+	-  crash_injuries_build.ipynb
+	-  LimpiezaCrashes.ipynb
+Cada notebook se encarga de limpiar y estandarizar una o más tablas específicas del modelo de datos.
+
+3. Orden de ejecución
+Para reproducir correctamente la limpieza, los notebooks deben ejecutarse en el siguiente orden:
+	1. trim_crashes.ipynb
+       Limpieza inicial del conjunto de datos Traffic_Crashes_Crashes
+	2. trim_vehicles.ipynb
+	   Limpieza inicial del conjunto de datos Traffic_Crashes_Vehicles
+	3. limpieza_people_people.ipynb
+       Normalización y estandarización de atributos de personas involucradas.
+	4. limpieza_people_driver_info.ipynb
+       Limpieza de información específica de conductores
+	5. crash_injuries_build.ipynb
+       Limpieza y construcción de variables relacionadas con lesiones
+	6. LimpiezaCrashes.ipynb
+       Limpieza y normalización de crashes
+	7. Pedestrian_info.ipynb
+       Limpieza y normalización de atributos relacionados con peatones
+	8. Crash_classification 
+	   Limpieza de crash_classification
 ---
 ## Normalización de datos
 
