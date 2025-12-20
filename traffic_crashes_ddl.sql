@@ -3,7 +3,7 @@
 DROP TABLE IF EXISTS crashes;
 CREATE TABLE crashes (
 crash_record_id VARCHAR(128) PRIMARY KEY,
-crash_date TIMESTAMP,
+incident_date TIMESTAMP,
 latitude NUMERIC(9,6), 
 longitude NUMERIC(9,6),
 street_no VARCHAR(20),
@@ -79,7 +79,7 @@ CREATE TABLE vehicle (
 );
 
 DROP TABLE IF EXISTS vehicle_specs;
-CREATE TABLE vehicle_models (
+CREATE TABLE vehicle_specs (
     vehicle_id BIGINT PRIMARY KEY REFERENCES vehicle(vehicle_id),
     vehicle_use VARCHAR(150),
     vehicle_config VARCHAR(150),
@@ -89,7 +89,7 @@ CREATE TABLE vehicle_models (
 DROP TABLE IF EXISTS vehicle_maneuvers;
 CREATE TABLE vehicle_maneuvers (
     vehicle_id BIGINT PRIMARY KEY REFERENCES vehicle(vehicle_id),
-    manuever VARCHAR(150)
+    maneuver VARCHAR(150)
 );
 
 DROP TABLE IF EXISTS vehicle_violations;
@@ -100,7 +100,6 @@ exceed_speed_limit_i BOOLEAN,
 hazmat_present_i BOOLEAN,
 vehicle_defect VARCHAR(100)
 );
-
 
 
 -- ============================
@@ -124,10 +123,6 @@ CREATE TABLE people
     FOREIGN KEY (vehicle_id) REFERENCES vehicle(vehicle_id)
 );
 
-
--- ============================
--- TABLE: driver_info
--- ============================
 DROP TABLE IF EXISTS driver_info;
 CREATE TABLE driver_info
 (
@@ -141,27 +136,6 @@ CREATE TABLE driver_info
 
     FOREIGN KEY (person_id) REFERENCES people(person_id)
 );
-
--- SELECT
---     CASE
---         WHEN age < 23 THEN 'Adolescente'
---         WHEN age BETWEEN 23 AND 55 THEN 'Adulto'
---         ELSE 'Adulto mayor'
---     END AS grupo_edad,
---     sex AS sexo,
---     COUNT(*) AS total_personas_involucradas
--- FROM people
--- JOIN driver_info 
---     ON people.person_id = driver_info.person_id   -- filtra solo conductores
--- WHERE age IS NOT NULL 
--- GROUP BY grupo_edad, sexo
--- ORDER BY total_personas_involucradas DESC;
-
--- SELECT * FROM people where sex = '';
-
-
-
-
 
 
 
