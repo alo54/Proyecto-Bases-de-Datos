@@ -775,10 +775,10 @@ Documentación (ReDoc): http://localhost:8000/redoc
 
 
 
-🔧 Solución de Problemas: Firewall y Puertos
+## 🔧 Solución de Problemas: Firewall y Puertos
 Si la API se está ejecutando pero no logras acceder a ella desde el navegador o herramientas externas, es probable que el Firewall esté bloqueando la conexión.
 
-##Windows
+## Windows
 Si experimentas bloqueos, asegúrate de desactivar los perfiles de Windows Defender (Dominio, Privado y Público) momentáneamente para probar la conexión.
 
 Alternativamente, puedes ejecutar los siguientes comandos en PowerShell como Administrador para gestionar el puerto específicamente:
