@@ -159,7 +159,9 @@ Los notebooks responsables del proceso de limpieza son los siguientes:
 	- limpieza_people_people.ipynb
 	-  limpieza_people_driver_info.ipynb
 	-  crash_injuries_build.ipynb
+    -  vehicles_buildcsv.ipynb
 	-  LimpiezaCrashes.ipynb
+
 Cada notebook se encarga de limpiar y estandarizar una o más tablas específicas del modelo de datos.
 
 3. Orden de ejecución
@@ -180,6 +182,8 @@ Para reproducir correctamente la limpieza, los notebooks deben ejecutarse en el 
        Limpieza y normalización de atributos relacionados con peatones
 	8. Crash_classification 
 	   Limpieza de crash_classification
+    9. vehicles_buildcsv.ipynb
+       Limpieza y normalización de vehicles
 ---
 ## Normalización de datos
 
@@ -282,6 +286,7 @@ WHERE cc.road_defect IS NOT NULL
 GROUP BY cc.road_defect
 ORDER BY total_crashes DESC;
 ```
+La mayoría de los choques ocurren cuando la vía no reporta defectos, lo que sugiere que el estado del camino no siempre es el factor principal 
 
 2. Calles con más accidentes
 
@@ -295,6 +300,7 @@ ORDER BY total_crashes DESC
 LIMIT 10;
 ```
 ![Calles con más accidentes](figures/calles.png)
+Avenidas como Western Ave y Pulaski Rd concentran muchos más choques que el resto
 
 3. Proporción de accidentes por condición de iluminación
 
@@ -310,6 +316,7 @@ ORDER BY crash_share DESC;
 ```
 Donde crash_share representa la proporción de accidentes asociada a cada condición de iluminación respecto al total.
 ![Condición de iluminación](figures/iluminacion.png)
+La mayor parte de los accidentes sucede de día, porque es cuando más se circula 
 
 ### II. Condiciones de clima y fecha
 4. Condiciones climáticas asociadas a más accidentes
@@ -325,6 +332,7 @@ GROUP BY cc.weather_condition
 ORDER BY total_crashes DESC;
 ```
 ![Accidentes por clima](figures/clima_choques.png)
+El clima despejado concentra la mayor cantidad de choques, lo cual indica que el mal clima no es la única causa de riesgo
 
 5. Severidad de lesiones por condición climática
    
@@ -341,6 +349,7 @@ JOIN CRASH_INJURIES ci
 GROUP BY cc.weather_condition
 ORDER BY fatalities DESC;
 ```
+En clima despejado es donde se observa el mayor número de lesiones graves y fatales, tal vez ppr la alta cantidad de accidentes.
 
 6. Accidentes por día de la semana y mes 
 
@@ -353,6 +362,7 @@ FROM CRASH_DATE cd
 GROUP BY cd.crash_day_of_week, cd.crash_month
 ORDER BY total_crashes DESC;
 ```
+Los sábados en septiembre se concentra la mayor cantidad de choques
 
 7. Horario con más accidentes y lesiones
    
@@ -374,6 +384,7 @@ JOIN crash_injuries ci
 GROUP BY time_band
 ORDER BY total_injuries DESC;
 ```
+En la tarde, de 12-17, es la que acumula más choques y lesiones, probablemente por tener mayor actividad
 
 ### III. Condiciones del conductor
 8. Accidentes con alcohol involucrado y severidad del choque
@@ -391,6 +402,7 @@ JOIN crash_injuries ci
     ON p.crash_record_id = ci.crash_record_id
 WHERE di.bac_result_value > 0;
 ```
+En los choques donde hay alcohol involucrado, se observan tanto muertes como lesiones graves, confirmando que el alcohol sigue siendo un factor de alto riesgo.
 
 9. Edad promedio de conductores en choques con y sin fallecidos
 
@@ -412,6 +424,7 @@ GROUP BY f.fatal_crash
 ORDER BY avg_driver_age;
 ```
 ![Edad de conductores](figures/edad.png)
+La edad promedio en ambos casos es aproximadamente 40 años, por lo que la edad por sí sola no parece marcar una gran diferencia
 
 10. Uso de teléfono vs consumo de alcohol
 
@@ -450,6 +463,7 @@ SELECT
     (SELECT COUNT(*) FROM drivers_phone)   AS phone_crashes;
 ```
 ![Casos de alcohol vs uso de celular](figures/alcoholvscel.png)
+Los choques asociados al alcohol son más frecuentes que los relacionados con el uso del teléfono
 
 ### IV. Condiciones del vehículo
 11. Límite de velocidad
@@ -473,6 +487,7 @@ JOIN crash_injuries ci
 GROUP BY speed_band
 ORDER BY speed_band DESC;
 ```
+La mayoría de los choques ocurre en zonas con límites de velocidad entre 30 y 39 mph, lo cual no dice mucho porque suelen ser los límites más comunes en la ciudad
 
 12. Choques por tipo de uso del vehículo
 
@@ -484,6 +499,7 @@ ON v.vehicle_id= vs.vehicle_id
 GROUP BY vehicle_use
 ORDER BY total_crashes DESC;
 ```
+Los vehículos de uso personal concentran la mayoría de los choques, muy por encima de vehículos comerciales o de servicio. 
 
 13. Accidentes por marca y modelo
 
@@ -500,6 +516,7 @@ ORDER BY total_crashes DESC
 LIMIT 10;
 ```
 ![Modelos de vehículo](figures/modelo.png)
+En primer lugar esta Honda Civic, segudio de Toyota Camry y finalmente Honda Accord. Por lo que sería importante analizar fallas en esos modelos
 
 ### V. Hotspots
 14. Identificación de hotspots
@@ -516,6 +533,7 @@ GROUP BY lat_grid, lon_grid
 ORDER BY total_crashes DESC;
 ```
 ![Mapa de calor de accidentes](figures/mapacalor.png)
+Se ve un hotspot importante en (41.976,-87.905), como se ve en el mapa
 
 15.  Factores dominantes de cada hotspot
 
@@ -546,6 +564,8 @@ HAVING COUNT(*) >= 30
 ORDER BY total_crashes DESC
 LIMIT 30;
 ```
+En el hotspot principal se ven clima despejado y luz del día. Por lo que no podemos concluir que estos factores no tienen gran impacto.
+
 ## Conclusión
 El análisis de los datos de accidentes de tránsito en Chicago muestra que la ocurrencia de choques no está dominada únicamente por condiciones adversas como el mal clima o los defectos en la vía, sino principalmente por factores asociados al volumen de tráfico, la ubicación y el comportamiento de los conductores. La mayoría de los accidentes se concentran en condiciones aparentemente favorables —clima despejado, buena iluminación y vialidades sin defectos— lo que sugiere que la exposición al tráfico y la actividad urbana intensa juegan un papel central en el riesgo vial.
 
