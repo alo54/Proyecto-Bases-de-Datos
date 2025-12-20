@@ -547,3 +547,11 @@ ORDER BY total_crashes DESC
 LIMIT 30;
 ```
 
+## Conclusión
+El análisis de los datos de accidentes de tránsito en Chicago muestra que la ocurrencia de choques no está dominada únicamente por condiciones adversas como el mal clima o los defectos en la vía, sino principalmente por factores asociados al volumen de tráfico, la ubicación y el comportamiento de los conductores. La mayoría de los accidentes se concentran en condiciones aparentemente favorables —clima despejado, buena iluminación y vialidades sin defectos— lo que sugiere que la exposición al tráfico y la actividad urbana intensa juegan un papel central en el riesgo vial.
+
+Los resultados permiten identificar zonas críticas específicas, como avenidas con alta concentración de choques (por ejemplo, Western Ave y Pulaski Rd), así como patrones temporales claros, especialmente en horarios de alta circulación durante la tarde y en ciertos días y meses del año. Esto abre la puerta a intervenciones focalizadas en lugar de medidas generales para toda la ciudad.
+
+A partir de estos hallazgos, se proponen las siguientes recomendaciones para disminuir la cantidad y severidad de los choques en Chicago:
+1. Intervenciones  en hotspots: Priorizar mejoras en infraestructura, señalización y control vial en las zonas con mayor concentración de accidentes, en lugar de aplicar políticas homogéneas en toda la ciudad.
+2. Gestión del tráfico en horas pico: Implementar estrategias de control de flujo, sincronización semafórica y regulación del tránsito durante la franja de mayor riesgo (especialmente entre las 12:00 y 17:00 horas).
