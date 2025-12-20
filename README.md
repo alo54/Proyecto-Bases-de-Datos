@@ -685,6 +685,8 @@ Abra su terminal y ejecute el siguiente comando para descargar los archivos del 
 
 ```bash
 git clone [https://github.com/alo54/Proyecto-Bases-de-Datos.git](https://github.com/alo54/Proyecto-Bases-de-Datos.git)
+```
+---
 
 2. Configuración de la Base de Datos
 Para que la API pueda conectarse correctamente a la base de datos PostgreSQL alojada en el servidor (accesible vía VPN), es necesario actualizar la cadena de conexión.
@@ -695,18 +697,21 @@ Abra el archivo y modifique la variable DATABASE_URL con las credenciales del us
 
 # Archivo: api-proyecto/api-proyecto/db/session.py
 
+```python
 DATABASE_URL = (
     "postgresql+psycopg2://"
     "marco:4igxB7IVPU1WsWIGwZOrSA4gu5wqjo4aAKYkktgtM9i1"
     "@10.10.10.28:5432/traffic_crashes"
 )
-
+```
 Nota: Asegúrese de estar conectado a la VPN privada para tener acceso a la IP 10.10.10.28.
+
+---
 
 3. Instalación y Ejecución
 Este proyecto utiliza uv (Astral) para la gestión de dependencias y entornos virtuales. Siga las instrucciones correspondientes a su sistema operativo.
 Windows (PowerShell)
-
+```bash
 # 1. Navegar al directorio de la API
 cd .\Proyecto-Bases-de-Datos\api-proyecto\api-proyecto
 
@@ -730,9 +735,9 @@ uv sync
 
 # 8. Ejecutar la API
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
+```
 
-
-
+```bash
 macOS / Linux (Bash/Zsh)
 # 1. Navegar al directorio de la API
 cd ./Proyecto-Bases-de-Datos/api-proyecto/api-proyecto
@@ -757,7 +762,7 @@ uv sync
 
 # 8. Ejecutar la API
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
+```
 
 Acceso a la API
 Una vez que el servidor esté en ejecución, podrás acceder a la API y a su documentación interactiva en las siguientes URLs:
