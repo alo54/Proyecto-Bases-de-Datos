@@ -139,6 +139,47 @@ Por último, en **`crash_injuries`** se detectó la presencia de valores nulos e
 
 Al concluir este proceso, se obtuvo un conjunto de tablas con datos limpios, correctamente tipados y coherente entre sí, listos para su análisis y para garantizar integridad durante la normalización. 
 
+### Replicación
+Esta sección describe cómo reproducir el proceso de limpieza de la base de datos a partir de los archivos originales, utilizando Python y Jupyter Notebooks.
+
+1. Requisitos
+Para ejecutar los scripts de limpieza es necesario contar con:
+* Python 3.9 o superior
+* Jupyter Notebook
+* Librerías de Python:
+    * pandas
+    * numpy
+ 
+2. Estructura relevante del proyecto
+Los notebooks responsables del proceso de limpieza son los siguientes:
+	- trim_crashes.ipynb
+	- trim_vehicles.ipynb
+	- Pedestrian_info.ipynb
+	- Crash_classification.ipnynb
+	- limpieza_people_people.ipynb
+	-  limpieza_people_driver_info.ipynb
+	-  crash_injuries_build.ipynb
+	-  LimpiezaCrashes.ipynb
+Cada notebook se encarga de limpiar y estandarizar una o más tablas específicas del modelo de datos.
+
+3. Orden de ejecución
+Para reproducir correctamente la limpieza, los notebooks deben ejecutarse en el siguiente orden:
+	1. trim_crashes.ipynb
+       Limpieza inicial del conjunto de datos Traffic_Crashes_Crashes
+	2. trim_vehicles.ipynb
+	   Limpieza inicial del conjunto de datos Traffic_Crashes_Vehicles
+	3. limpieza_people_people.ipynb
+       Normalización y estandarización de atributos de personas involucradas.
+	4. limpieza_people_driver_info.ipynb
+       Limpieza de información específica de conductores
+	5. crash_injuries_build.ipynb
+       Limpieza y construcción de variables relacionadas con lesiones
+	6. LimpiezaCrashes.ipynb
+       Limpieza y normalización de crashes
+	7. Pedestrian_info.ipynb
+       Limpieza y normalización de atributos relacionados con peatones
+	8. Crash_classification 
+	   Limpieza de crash_classification
 ---
 ## Normalización de datos
 
@@ -161,10 +202,6 @@ Como resultado, se obtuvo un esquema relacional robusto, flexible y alineado con
 
 <img width="1280" height="498" alt="image" src="https://github.com/user-attachments/assets/444a6459-e7e1-4ab1-b94a-f8076b2957bf" />
 
-## Carga inicial de datos y analisis preliminar
-
-Para la carga inicial de datos se decidió utilizar un enfoque en el cual la información original del conjunto de datos de accidentes de tránsito se separó desde un inicio en múltiples tablas relacionadas. Esta decision se tomó debido a la alta heterogeneidad de los atributos y a la clara existencia de entidades conceptuales distintas, como accidentes, vehículos y personas involucradas. 
-
 El proceso comenzó con la creación de la tabla principal **'crashes'**, la cual concentra la información base de cada accidente, identificada de manera única por el atributo **'crash_record_id'**. Esta tabla almacena información temporal y espacial del evento, como la fecha del accidente, coordenadas geográficas y la vialidad asociada. 
 
 Posteriormente, a partir del identificados del accidente, se crearon tablas auxiliares especializdas que capturan distintos aspectos del mismo evento: 
@@ -184,8 +221,49 @@ Finalmente, se creó la tabla **'people'**, que contiene la información de las 
 
 Este diseño inicial permitió contar desde el incio con una base de datos estructurada, coherente y preparada para un proceso sistemático de limpieza y normalización
 
----
-## Limpieza y Normalización de datos
+## Carga inicial de datos y analisis preliminar
+Antes de realizar cualquier proceso de análisis, fue necesario crear la estructura de la base de datos y cargar la información limpia en un conjunto de tablas relacionales. Este proceso se realizó en dos etapas: creación del esquema y carga de datos desde archivos CSV
+
+1. Creación de las tablas (DDL)
+La estructura completa de la base de datos se define en el archivo: 
+```sql
+traffic_crashes_ddl.sql
+```
+Este archivo contiene las sentencias DROP TABLE IF EXISTS y CREATE TABLE necesarias para crear todas las tablas del modelo relacional, incluyendo:
+	* crashes
+	* crash_date
+	* crash_circumstances
+	* crash_classification
+	* crash_injuries
+	* vehicle
+	* vehicle_models
+	* vehicle_maneuvers
+	* vehicle_violations
+	* people
+	* driver_info
+Las relaciones entre tablas se establecen mediante llaves foráneas basadas principalmente en los identificadores crash_record_id, vehicle_id y person_id, garantizando la integridad referencial desde el inicio.
+Para crear las tablas, el archivo traffic_crashes_ddl.sql debe ejecutarse completamente en la base de datos antes de cargar cualquier información.
+
+2. Carga de datos desde archivos CSV
+Una vez creadas las tablas, los datos fueron cargados a partir de archivos CSV generados durante el proceso de limpieza en Python.
+La carga se realizó utilizando TablePlus, siguiendo estos pasos para cada tabla:
+	1. Abrir la conexión a la base de datos en TablePlus.
+	2. Seleccionar la tabla destino (previamente creada).
+	3. Hacer clic derecho sobre la tabla y elegir: Import → From CSV
+	4. Seleccionar el archivo CSV correspondiente.
+	5. Verificar que las columnas del CSV coincidan con la estructura de la tabla.
+	6. Ejecutar la importación.
+Este proceso se repitió para cada tabla del modelo, asegurando que:
+* Las tablas principales se cargaran antes que las tablas dependientes.
+* Las llaves foráneas existieran previamente para evitar errores de integridad.
+
+- Limpieza final directamente en SQL
+Después de completar la carga de los datos desde los archivos CSV, se realizó una última etapa de limpieza directamente sobre la base de datos utilizando sentencias SQL, con el objetivo de asegurar la consistencia de los valores nulos.
+En particular, se detectó que algunos campos de tipo texto contenían cadenas vacías ('') en lugar de valores NULL, lo cual podía generar inconsistencias en consultas posteriores y en el uso de funciones de agregación.
+Para corregir esto, se ejecutó el archivo:
+```sql
+limpieza_ddl.sql
+```
 
 ## Análisis de datos a través de consultas SQL
 Realizamos varias consultas de SQL para el análisis de la base de datos, descubriendo información valiosa para identificar y concluir acerca de factores de riesgo y patrones de accidentes.
@@ -469,3 +547,11 @@ ORDER BY total_crashes DESC
 LIMIT 30;
 ```
 
+## Conclusión
+El análisis de los datos de accidentes de tránsito en Chicago muestra que la ocurrencia de choques no está dominada únicamente por condiciones adversas como el mal clima o los defectos en la vía, sino principalmente por factores asociados al volumen de tráfico, la ubicación y el comportamiento de los conductores. La mayoría de los accidentes se concentran en condiciones aparentemente favorables —clima despejado, buena iluminación y vialidades sin defectos— lo que sugiere que la exposición al tráfico y la actividad urbana intensa juegan un papel central en el riesgo vial.
+
+Los resultados permiten identificar zonas críticas específicas, como avenidas con alta concentración de choques (por ejemplo, Western Ave y Pulaski Rd), así como patrones temporales claros, especialmente en horarios de alta circulación durante la tarde y en ciertos días y meses del año. Esto abre la puerta a intervenciones focalizadas en lugar de medidas generales para toda la ciudad.
+
+A partir de estos hallazgos, se proponen las siguientes recomendaciones para disminuir la cantidad y severidad de los choques en Chicago:
+1. Intervenciones  en hotspots: Priorizar mejoras en infraestructura, señalización y control vial en las zonas con mayor concentración de accidentes, en lugar de aplicar políticas homogéneas en toda la ciudad.
+2. Gestión del tráfico en horas pico: Implementar estrategias de control de flujo, sincronización semafórica y regulación del tránsito durante la franja de mayor riesgo (especialmente entre las 12:00 y 17:00 horas).
