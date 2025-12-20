@@ -249,8 +249,7 @@ Una vez creadas las tablas, los datos fueron cargados a partir de archivos CSV g
 La carga se realizó utilizando TablePlus, siguiendo estos pasos para cada tabla:
 	1. Abrir la conexión a la base de datos en TablePlus.
 	2. Seleccionar la tabla destino (previamente creada).
-	3. Hacer clic derecho sobre la tabla y elegir:
-# Import → From CSV
+	3. Hacer clic derecho sobre la tabla y elegir: Import → From CSV
 	4. Seleccionar el archivo CSV correspondiente.
 	5. Verificar que las columnas del CSV coincidan con la estructura de la tabla.
 	6. Ejecutar la importación.
