@@ -159,6 +159,7 @@ Los notebooks responsables del proceso de limpieza son los siguientes:
 	- limpieza_people_people.ipynb
 	-  limpieza_people_driver_info.ipynb
 	-  crash_injuries_build.ipynb
+    -  vehicles_buildcsv.ipynb
 	-  LimpiezaCrashes.ipynb
 Cada notebook se encarga de limpiar y estandarizar una o más tablas específicas del modelo de datos.
 
@@ -180,6 +181,8 @@ Para reproducir correctamente la limpieza, los notebooks deben ejecutarse en el 
        Limpieza y normalización de atributos relacionados con peatones
 	8. Crash_classification 
 	   Limpieza de crash_classification
+    9. vehicles_buildcsv.ipynb
+       Limpieza y normalización de vehicles
 ---
 ## Normalización de datos
 
