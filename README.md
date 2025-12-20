@@ -20,6 +20,8 @@ Los datos son recolectados diariamente por el CPD a través del sistema **E-Cras
 - [Vehicles](https://data.cityofchicago.org/Transportation/Traffic-Crashes-Vehicles/68nd-jvt3/about_data)  
 - [People](https://data.cityofchicago.org/Transportation/Traffic-Crashes-People/u6pd-qa9d/about_data)  
 
+Se encuentran en la siguiente liga:
+https://drive.google.com/drive/folders/1yLkiUzb7McJdgqxMaWTjacWBjmKta2e6?usp=drive_link
 ---
 
 ## Resumen de datos
@@ -801,6 +803,567 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
 ```
 ### Reactivar el Firewall (Recomendado al finalizar)
 ```bash
-sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate o
 ```
+# API de Gestión de Accidentes de Tráfico - Chicago Traffic Crashes
+
+## 📋 Tabla de Contenidos
+- [Arquitectura de la API](#arquitectura-de-la-api)
+- [Generación de Identificadores Únicos](#generación-de-identificadores-únicos)
+- [Sistema de Validación](#sistema-de-validación)
+- [Manejo de Errores](#manejo-de-errores)
+- [Estructura de Endpoints](#estructura-de-endpoints)
+- [Consideraciones de Seguridad](#consideraciones-de-seguridad)
+
+---
+
+## 🏗️ Arquitectura de la API
+
+La API está construida sobre **FastAPI** con **SQLAlchemy** como ORM, siguiendo una arquitectura en capas que garantiza separación de responsabilidades y escalabilidad:
+
+```
+api-proyecto/
+├── api/
+│   ├── models/          # Schemas Pydantic (validación de entrada/salida)
+│   └── routers/         # Controladores de endpoints
+├── db/
+│   ├── entities/        # Modelos SQLAlchemy (tablas)
+│   └── session.py       # Gestión de conexiones a BD
+├── util/
+│   ├── id_generators.py # Generadores de IDs únicos
+│   ├── validators.py    # Validadores de datos
+│   └── logger.py        # Sistema de logging
+└── main.py              # Punto de entrada de la aplicación
+```
+
+### Middleware de Base de Datos
+
+El sistema utiliza un middleware personalizado (`DBSessionMiddleware`) que:
+- Crea una sesión de base de datos por cada request
+- Garantiza commit automático si la operación es exitosa
+- Ejecuta rollback automático en caso de error
+- Cierra la sesión al finalizar el request (patrón context manager)
+
+```python
+with self.db_session_manager.get_managed_session() as db_session:
+    request.state.db_session = db_session
+    # Request processing
+    # Auto-commit/rollback/close
+```
+
+---
+
+## 🔑 Generación de Identificadores Únicos
+
+Uno de los aspectos más críticos de la API es la generación determinística y segura de identificadores primarios. El módulo `util/id_generators.py` implementa tres estrategias diferentes:
+
+### 1. `crash_record_id` - Hash SHA-512 Determinístico
+
+Los crashes utilizan un hash criptográfico de sus atributos esenciales para garantizar unicidad:
+
+```python
+def generate_crash_record_id(
+    incident_date: datetime,
+    latitude: float,
+    longitude: float,
+    street_no: int,
+    street_name: str
+) -> str
+```
+
+**Proceso:**
+1. Formatea `incident_date` como string ISO (`YYYY-MM-DD HH:MM:SS`)
+2. Trunca coordenadas a **6 decimales** (precisión ~11cm)
+3. Concatena: `fecha + lat + lon + calle_no + nombre_calle`
+4. Genera hash SHA-512 → **128 caracteres hexadecimales**
+
+**Ventajas:**
+- Evita duplicados: mismo accidente = mismo ID
+- No requiere contador global ni secuencias de BD
+- Determinístico y reproducible
+
+**Ejemplo:**
+```
+Input:  2024-01-15 14:30:00, 41.878100, -87.629800, 1234, "N MICHIGAN AVE"
+Output: 000013b0123279411e0ec856dae95ab9f0851764350b7feaeb982c7707c6722066910e9391e60f45...
+```
+
+### 2. `person_id` - Formato Secuencial con Prefijo
+
+Las personas usan un formato alfanumérico incremental:
+
+```python
+def generate_person_id(db: Session) -> str
+    # Output: Q0000001, Q0000002, ..., Q9999999
+```
+
+**Proceso:**
+1. Consulta el máximo ID existente con patrón `^Q[0-9]{7}$`
+2. Extrae la parte numérica y suma 1
+3. Formatea con ceros a la izquierda (7 dígitos)
+4. Agrega prefijo `"Q"`
+
+**Límite:** 9,999,999 registros (Q9999999)
+
+### 3. `vehicle_id` - Autoincremental Simple
+
+Los vehículos usan un contador global BIGINT:
+
+```python
+def generate_vehicle_id(db: Session) -> int
+    # SELECT COALESCE(MAX(vehicle_id), 0) + 1 FROM vehicle
+```
+
+También genera `crash_unit_id` con el mismo método.
+
+**Nota:** Aunque usa BIGSERIAL conceptualmente, se implementa manualmente para mayor control transaccional.
+
+---
+
+## ✅ Sistema de Validación
+
+El módulo `util/validators.py` centraliza toda la lógica de validación de datos, ejecutándose **antes** de cualquier operación de base de datos:
+
+### Validadores Geoespaciales
+
+```python
+validate_coordinates(latitude: float, longitude: float)
+```
+- Rango latitud: [-41, 43]
+- Rango longitud: [-88, -86]
+- Lanza `HTTPException 400` si está fuera de rango
+
+### Validadores Temporales
+
+```python
+validate_date_not_future(date: datetime, field_name: str)
+```
+- Compara contra `datetime.now()`
+- Previene registros con fechas futuras
+- Usado en `incident_date` y campos temporales
+
+### Validadores de Dominio
+
+```python
+validate_age(age: int)                    # Rango: [0, 120]
+validate_vehicle_year(year: int)          # Rango: [1900, current_year + 1]
+validate_non_negative(value: int, field)  # value >= 0
+validate_string_length(value: str, max, field)
+```
+
+### Validación de Integridad Referencial
+
+El validador más importante para mantener consistencia:
+
+```python
+validate_foreign_key_exists(
+    db: Session,
+    table_name: str,
+    column_name: str,
+    value: Any
+)
+```
+
+**Uso:**
+```python
+# En PeopleRouter.create()
+if data.crash_record_id:
+    validate_foreign_key_exists(
+        db, "crashes", "crash_record_id", data.crash_record_id
+    )
+```
+
+Ejecuta una consulta SQL para verificar existencia **antes** de insertar:
+```sql
+SELECT 1 FROM {table_name} WHERE {column_name} = :value LIMIT 1
+```
+
+Si no existe → `HTTPException 404` con mensaje descriptivo
+
+---
+
+## 🛡️ Manejo de Errores
+
+La API implementa un sistema robusto de manejo de excepciones en múltiples capas:
+
+### 1. Handler Global de Validación (main.py)
+
+Convierte errores de validación Pydantic (422) en respuestas 400 más amigables:
+
+```python
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    errors = []
+    for error in exc.errors():
+        field = " -> ".join(str(x) for x in error["loc"][1:])
+        message = error["msg"]
+        
+        # Formateo amigable de mensajes
+        if error_type == "greater_than_equal":
+            message = f"Debe ser mayor o igual a {error['ctx']['ge']}"
+        
+        errors.append({"field": field, "message": message})
+    
+    return JSONResponse(status_code=400, content={
+        "detail": "Error de validación",
+        "errors": errors
+    })
+```
+
+**Respuesta típica:**
+```json
+{
+  "detail": "Error de validación en los datos proporcionados",
+  "errors": [
+    {
+      "field": "latitude",
+      "message": "Debe ser mayor o igual a -90"
+    }
+  ]
+}
+```
+
+### 2. Try-Catch en Routers
+
+Cada router implementa manejo específico de excepciones:
+
+```python
+# En CrashesRouter.create()
+try:
+    # Validaciones
+    validate_coordinates(data.latitude, data.longitude)
+    validate_date_not_future(data.incident_date, "incident_date")
+    
+    # Generación de ID
+    crash_record_id = generate_crash_record_id(...)
+    
+    # Verificar duplicado
+    if db.query(Crash).get(crash_record_id):
+        raise HTTPException(409, "Ya existe un crash con estos atributos")
+    
+    # Crear registro
+    new_crash = Crash(...)
+    db.add(new_crash)
+    db.flush()
+    
+except HTTPException:
+    raise  # Re-lanza excepciones HTTP
+except IntegrityError:
+    db.rollback()
+    raise HTTPException(400, "Error de integridad en BD")
+except Exception as e:
+    db.rollback()
+    raise HTTPException(500, f"Error interno: {str(e)}")
+```
+
+### 3. Logging Estructurado
+
+El sistema de logging (`util/logger.py`) registra todas las operaciones:
+
+```python
+self.logger.info(f"Creating new crash")
+self.logger.info(f"Generated crash_record_id: {crash_record_id}")
+self.logger.error(f"Integrity error: {str(e)}")
+```
+
+**Output de consola con colores:**
+```
+2024-01-15 14:30:45.123 | INFO     | api.routers.crashes | Creating new crash
+2024-01-15 14:30:45.456 | INFO     | api.routers.crashes | Generated crash_record_id: 000013b0...
+2024-01-15 14:30:45.789 | ERROR    | api.routers.crashes | Integrity error: duplicate key
+```
+
+---
+
+## 🌐 Estructura de Endpoints
+
+La API sigue el patrón RESTful con operaciones CRUD completas:
+
+### Endpoints Principales
+
+| Recurso | GET (list) | GET (detail) | POST | PUT | DELETE |
+|---------|------------|--------------|------|-----|--------|
+| `/crashes` | ✅ Paginado | ✅ Por ID | ✅ Auto-ID | ✅ | ✅ Cascade |
+| `/people` | ✅ Paginado | ✅ Por ID | ✅ Auto-ID | ✅ | ✅ |
+| `/vehicles` | ✅ Paginado | ✅ Por ID | ✅ Auto-ID | ✅ | ✅ Cascade |
+| `/crash_circumstances` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `/crash_injuries` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `/driver_info` | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+### Características Comunes
+
+**Paginación:**
+```http
+GET /crashes?skip=0&limit=100
+```
+- `skip`: Registros a omitir (default: 0)
+- `limit`: Registros a devolver (default: 100, max: 1000)
+
+**Respuestas Estándar:**
+
+**Éxito (201 Created):**
+```json
+{
+  "crash_record_id": "000013b0...",
+  "incident_date": "2024-01-15T14:30:00",
+  "latitude": 41.878100,
+  ...
+}
+```
+
+**Error (400 Bad Request):**
+```json
+{
+  "detail": "Latitud inválida: 91.5. Debe estar entre -90 y 90"
+}
+```
+
+**Error (404 Not Found):**
+```json
+{
+  "detail": "Crash 000013b0... no encontrado"
+}
+```
+
+**Error (409 Conflict):**
+```json
+{
+  "detail": "Ya existe un crash con estos atributos. ID: 000013b0..."
+}
+```
+
+### Ejemplo: Crear un Crash
+
+**Request:**
+```http
+POST /crashes
+Content-Type: application/json
+
+{
+  "incident_date": "2024-01-15T14:30:00",
+  "latitude": 41.878100,
+  "longitude": -87.629800,
+  "street_no": 1234,
+  "street_name": "N MICHIGAN AVE"
+}
+```
+
+**Flujo interno:**
+1. Pydantic valida el JSON contra `CreateCrash` schema
+2. `validate_coordinates()` verifica rangos geográficos
+3. `validate_date_not_future()` verifica fecha válida
+4. `truncate_coordinates()` limita precisión a 6 decimales
+5. `generate_crash_record_id()` crea hash SHA-512
+6. Verifica si ya existe el crash_record_id (duplicado)
+7. Crea instancia `Crash` de SQLAlchemy
+8. `db.add()` + `db.flush()` → commit automático por middleware
+9. Retorna objeto creado serializado por `ReadCrash` schema
+
+---
+
+## 🔒 Consideraciones de Seguridad
+
+### 1. Validación en Múltiples Capas
+
+- **Capa 1:** Pydantic valida tipos y rangos básicos
+- **Capa 2:** Validadores custom (`validators.py`) verifican lógica de negocio
+- **Capa 3:** Base de datos rechaza violaciones de constraints
+
+### 2. Protección contra Duplicados
+
+El sistema previene duplicados mediante:
+- Hash determinístico para crashes (mismo input → mismo ID)
+- Verificación explícita antes de insertar
+- Constraints UNIQUE en base de datos
+
+### 3. Manejo Seguro de Sesiones
+
+```python
+@contextmanager
+def get_managed_session(self):
+    session = self.SessionLocal()
+    try:
+        yield session
+        session.commit()  # Solo si no hubo excepciones
+    except Exception:
+        session.rollback()  # Revierte cambios
+        raise
+    finally:
+        session.close()  # Siempre cierra la conexión
+```
+
+### 4. Límites de Paginación
+
+```python
+if limit > 1000 or limit < 0:
+    raise HTTPException(400, "Límite máximo es 1000")
+```
+
+Previene ataques de denegación de servicio por consultas masivas.
+
+### 5. SQL Injection Prevention
+
+SQLAlchemy ORM usa parámetros preparados:
+```python
+# Seguro - usa parámetros
+db.query(Crash).get(crash_record_id)
+
+# También seguro en queries raw
+db.execute(text("SELECT 1 FROM crashes WHERE crash_record_id = :id"), 
+           {"id": crash_record_id})
+```
+
+---
+
+## 📊 Documentación Interactiva
+
+La API incluye documentación automática generada por FastAPI:
+
+- **Swagger UI:** `http://localhost:8000/docs`
+- **ReDoc:** `http://localhost:8000/redoc`
+
+Ambas interfaces permiten:
+- Explorar todos los endpoints disponibles
+- Ver schemas de request/response
+- Probar endpoints directamente desde el navegador
+- Ver códigos de error posibles
+
+### Ejemplo de Schema en Docs
+
+```yaml
+CreateCrash:
+  type: object
+  required:
+    - incident_date
+    - latitude
+    - longitude
+  properties:
+    incident_date:
+      type: string
+      format: date-time
+      description: "Fecha y hora del incidente (no puede ser futura)"
+    latitude:
+      type: number
+      minimum: -90
+      maximum: 90
+      description: "Latitud del crash (será truncada a 6 decimales)"
+    # ...
+```
+
+---
+
+## 🧪 Testing de la API
+
+### Usando cURL
+
+**Crear un crash:**
+```bash
+curl -X POST "http://localhost:8000/crashes" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "incident_date": "2024-01-15T14:30:00",
+    "latitude": 41.878100,
+    "longitude": -87.629800,
+    "street_no": 1234,
+    "street_name": "N MICHIGAN AVE"
+  }'
+```
+
+**Listar crashes (paginado):**
+```bash
+curl "http://localhost:8000/crashes?skip=0&limit=10"
+```
+
+**Obtener un crash específico:**
+```bash
+curl "http://localhost:8000/crashes/000013b0123279411e0ec856..."
+```
+
+### Usando httpie
+
+```bash
+# POST con sintaxis simplificada
+http POST localhost:8000/crashes \
+  incident_date="2024-01-15T14:30:00" \
+  latitude:=41.878100 \
+  longitude:=-87.629800 \
+  street_no:=1234 \
+  street_name="N MICHIGAN AVE"
+
+# GET con query params
+http GET localhost:8000/crashes skip==0 limit==10
+```
+
+---
+
+## 🔧 Configuración Avanzada
+
+### Variables de Entorno
+
+Edita `db/session.py` para configurar la conexión:
+
+```python
+DATABASE_URL = (
+    f"postgresql+psycopg2://{os.getenv('DB_USER', 'user')}:"
+    f"{os.getenv('DB_PASS', 'password')}@"
+    f"{os.getenv('DB_HOST', 'localhost')}:"
+    f"{os.getenv('DB_PORT', '5432')}/"
+    f"{os.getenv('DB_NAME', 'traffic_crashes')}"
+)
+```
+
+### Logging Personalizado
+
+Ajusta el nivel de detalle en `util/logger.py`:
+
+```python
+LoggerSessionManager(log_level=logging.DEBUG)  # Más verboso
+LoggerSessionManager(log_level=logging.WARNING)  # Solo advertencias
+```
+
+### CORS (para aplicaciones frontend)
+
+Agrega en `main.py`:
+
+```python
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React, Vue, etc.
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+---
+
+## 📈 Métricas y Monitoreo
+
+### Logs Estructurados
+
+Todos los routers loggean operaciones clave:
+
+```python
+# Inicio de operación
+self.logger.info(f"Creating new crash")
+
+# IDs generados
+self.logger.info(f"Generated crash_record_id: {crash_record_id}")
+
+# Operaciones exitosas
+self.logger.info(f"Created crash with ID: {crash_record_id}")
+
+# Errores con contexto
+self.logger.error(f"Integrity error creating crash: {str(e)}")
+```
+---
+
+## 📚 Referencias
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [SQLAlchemy ORM](https://docs.sqlalchemy.org/en/20/orm/)
+- [Pydantic Validation](https://docs.pydantic.dev/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+
 
