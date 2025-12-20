@@ -688,7 +688,7 @@ git clone [https://github.com/alo54/Proyecto-Bases-de-Datos.git](https://github.
 ```
 ---
 
-2. Configuración de la Base de Datos
+### 2. Configuración de la Base de Datos
 Para que la API pueda conectarse correctamente a la base de datos PostgreSQL alojada en el servidor (accesible vía VPN), es necesario actualizar la cadena de conexión.
 
 Localice el archivo de configuración de sesión en la siguiente ruta: api-proyecto/api-proyecto/db/session.py
@@ -708,7 +708,7 @@ Nota: Asegúrese de estar conectado a la VPN privada para tener acceso a la IP 1
 
 ---
 
-3. Instalación y Ejecución
+### 3. Instalación y Ejecución
 Este proyecto utiliza uv (Astral) para la gestión de dependencias y entornos virtuales. Siga las instrucciones correspondientes a su sistema operativo.
 Windows (PowerShell)
 ```bash
@@ -778,24 +778,29 @@ Documentación (ReDoc): http://localhost:8000/redoc
 🔧 Solución de Problemas: Firewall y Puertos
 Si la API se está ejecutando pero no logras acceder a ella desde el navegador o herramientas externas, es probable que el Firewall esté bloqueando la conexión.
 
-Windows
+##Windows
 Si experimentas bloqueos, asegúrate de desactivar los perfiles de Windows Defender (Dominio, Privado y Público) momentáneamente para probar la conexión.
 
 Alternativamente, puedes ejecutar los siguientes comandos en PowerShell como Administrador para gestionar el puerto específicamente:
 
-# Abrir puerto 8000 en el firewall (Permitir tráfico entrante)
+### Abrir puerto 8000 en el firewall (Permitir tráfico entrante)
+```bash
 New-NetFirewallRule -DisplayName "Permitir Puerto 8000" -Direction Inbound -LocalPort 8000 -Protocol TCP -Action Allow
+```
 
-# Cerrar puerto 8000 (Revertir cambios)
+### Cerrar puerto 8000 (Revertir cambios)
+```bash
 Remove-NetFirewallRule -DisplayName "Permitir Puerto 8000"
-
-macOS
+```
+##macOS
 En macOS, el sistema suele solicitar permiso para "Aceptar conexiones entrantes" la primera vez que se ejecuta la aplicación. Si esto falla, puedes desactivar el Firewall de aplicación temporalmente desde la terminal:
 
-# Desactivar el Firewall de aplicación (Permitir todas las conexiones)
+### Desactivar el Firewall de aplicación (Permitir todas las conexiones)
+```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
-
-# Reactivar el Firewall (Recomendado al finalizar)
+```
+### Reactivar el Firewall (Recomendado al finalizar)
+```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
-
+```
 
